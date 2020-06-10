@@ -2,55 +2,55 @@ package server
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	log "github.com/go-pkgz/lgr"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-var srv *http.Server
+var bot *tgbotapi.BotAPI
 
-func Start() {
-	// Hook for terminate signal
+// Start will call for bot instance and process update messages
+func Start(token string, debug bool) {
+	bt, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		log.Printf("PANIC Error while creating bot instance: %s", err)
+	}
+
+	bot = bt
+	bot.Debug = debug
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	cfg := tgbotapi.NewUpdate(0)
+	cfg.Timeout = 60
+
+	// Hook for system signal
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 		<-stop
+		log.Print("WARN System interrupt signal")
 		cancel()
 	}()
 
-	// Close context and call for http shutdown
+	// Call shutdown service
 	go func() {
 		<-ctx.Done()
 		shutdown()
 	}()
 
-	// Configure and start http server
-	srv = &http.Server{Handler: newRouter()}
-	srv.ListenAndServe()
-}
-
-func newRouter() http.Handler {
-	r := chi.NewRouter()
-
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Timeout(5 * time.Second))
-
-	r.Get("/", GetHandler)
-
-	return r
+	// Read commands from users
+	log.Print("INFO Start updates processing")
+	updates, err := bot.GetUpdatesChan(cfg)
+	for update := range updates {
+		handleUpdate(update)
+	}
 }
 
 func shutdown() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		//		logger.Warnf("Server shutdown error, %s", err)
-	}
+	log.Print("INFO Stop updates processing")
+	bot.StopReceivingUpdates()
 }
