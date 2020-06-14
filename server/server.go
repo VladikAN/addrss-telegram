@@ -36,21 +36,16 @@ func Start(token string, debug bool) {
 		cancel()
 	}()
 
-	// Call shutdown service
-	go func() {
-		<-ctx.Done()
-		shutdown()
-	}()
-
 	// Read commands from users
 	log.Print("INFO Start updates processing")
 	updates, err := bot.GetUpdatesChan(cfg)
-	for update := range updates {
-		handleUpdate(update)
-	}
-}
+	go func() {
+		for update := range updates {
+			handleUpdate(update)
+		}
+	}()
 
-func shutdown() {
+	<-ctx.Done()
 	log.Print("INFO Stop updates processing")
 	bot.StopReceivingUpdates()
 }
