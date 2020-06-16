@@ -2,6 +2,7 @@ package server
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/vladikan/feedreader-telegrambot/commands"
 )
 
 func handleUpdate(update tgbotapi.Update) {
@@ -10,9 +11,14 @@ func handleUpdate(update tgbotapi.Update) {
 	}
 
 	msg := update.Message
+	cmd := commands.Build(msg)
+	if cmd == nil {
+		rsp := tgbotapi.NewMessage(msg.Chat.ID, "Sorry, command is unknown")
+		rsp.ReplyToMessageID = msg.MessageID
+		bot.Send(rsp)
 
-	rsp := tgbotapi.NewMessage(msg.Chat.ID, msg.Text)
-	rsp.ReplyToMessageID = msg.MessageID
+		return
+	}
 
-	bot.Send(rsp)
+	cmd.Execute()
 }

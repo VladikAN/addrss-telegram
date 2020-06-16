@@ -8,19 +8,21 @@ import (
 
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/vladikan/feedreader-telegrambot/database"
 )
 
 var bot *tgbotapi.BotAPI
+var db database.Database
 
 // Start will call for bot instance and process update messages
-func Start(token string, debug bool) {
-	bt, err := tgbotapi.NewBotAPI(token)
+func Start(options Options) {
+	bt, err := tgbotapi.NewBotAPI(options.Token)
 	if err != nil {
 		log.Printf("PANIC Error while creating bot instance: %s", err)
 	}
 
 	bot = bt
-	bot.Debug = debug
+	bot.Debug = options.Debug
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	cfg := tgbotapi.NewUpdate(0)
@@ -36,6 +38,10 @@ func Start(token string, debug bool) {
 		cancel()
 	}()
 
+	// Open database connection
+	db = database.PgDatabase{Address: options.DbConnection}
+	db.Open()
+
 	// Read commands from users
 	log.Print("INFO Start updates processing")
 	updates, err := bot.GetUpdatesChan(cfg)
@@ -45,7 +51,9 @@ func Start(token string, debug bool) {
 		}
 	}()
 
+	// Stop bot operations and close db connection
 	<-ctx.Done()
 	log.Print("INFO Stop updates processing")
 	bot.StopReceivingUpdates()
+	db.Close()
 }
