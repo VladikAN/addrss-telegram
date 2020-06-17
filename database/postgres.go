@@ -7,7 +7,7 @@ import (
 )
 
 // Open will start database connection. Should be called first
-func (db PgDatabase) Open(address string) error {
+func (db Database) Open(address string) error {
 	conn, err := pgx.Connect(context.Background(), address)
 	if err != nil {
 		return err
@@ -18,6 +18,6 @@ func (db PgDatabase) Open(address string) error {
 }
 
 // Close will termintae current connection, Should be called after all operations
-func (db PgDatabase) Close() {
+func (db Database) Close() {
 	db.Connection.Close(context.Background())
 }

@@ -39,15 +39,15 @@ func Start(options Options) {
 	}()
 
 	// Open database connection
-	db = database.PgDatabase{Address: options.DbConnection}
-	db.Open()
+	db = database.Database{Address: options.DbConnection}
+	db.Open(options.DbConnection)
 
 	// Read commands from users
 	log.Print("INFO Start updates processing")
 	updates, err := bot.GetUpdatesChan(cfg)
 	go func() {
 		for update := range updates {
-			handleUpdate(update)
+			handleRequest(update)
 		}
 	}()
 
@@ -56,4 +56,23 @@ func Start(options Options) {
 	log.Print("INFO Stop updates processing")
 	bot.StopReceivingUpdates()
 	db.Close()
+}
+
+func handleRequest(update tgbotapi.Update) {
+	if update.Message == nil {
+		return
+	}
+
+	msg := update.Message
+	txt, err := runCommand(msg)
+	if err == nil {
+		rsp := tgbotapi.NewMessage(msg.Chat.ID, txt)
+		bot.Send(rsp)
+
+		return
+	}
+
+	log.Printf("ERROR command '%s' compleated with error: %s", msg.Text, err)
+	rsp := tgbotapi.NewMessage(msg.Chat.ID, "Sorry we have a error while processing your request")
+	bot.Send(rsp)
 }
