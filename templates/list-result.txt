@@ -1,0 +1,8 @@
+Active subscriptions:
+
+{{range .}}
+{{.Name}}
+{{end}}
+
+Use /read to read all subscriptions.
+Or use /read [name1] [name2] to read only mentioned subscriptions.

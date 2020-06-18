@@ -7,6 +7,7 @@ CREATE TABLE feeds(
 CREATE TABLE userfeeds(
     user_id INTEGER NOT NULL,
     feed_id INTEGER NOT NULL,
+    added DATE NOT NULL DEFAULT CURRENT_DATE,
 
     PRIMARY KEY (user_id, feed_id),
 

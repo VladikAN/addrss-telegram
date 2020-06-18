@@ -38,10 +38,6 @@ func Start(options Options) {
 		cancel()
 	}()
 
-	// Open database connection
-	db = database.Database{Address: options.DbConnection}
-	db.Open(options.DbConnection)
-
 	// Read commands from users
 	log.Print("INFO Start updates processing")
 	updates, err := bot.GetUpdatesChan(cfg)
@@ -55,7 +51,6 @@ func Start(options Options) {
 	<-ctx.Done()
 	log.Print("INFO Stop updates processing")
 	bot.StopReceivingUpdates()
-	db.Close()
 }
 
 func handleRequest(update tgbotapi.Update) {
@@ -72,7 +67,7 @@ func handleRequest(update tgbotapi.Update) {
 		return
 	}
 
-	log.Printf("ERROR command '%s' compleated with error: %s", msg.Text, err)
+	log.Printf("ERROR command '%s' completed with error: %s", msg.Text, err)
 	rsp := tgbotapi.NewMessage(msg.Chat.ID, "Sorry we have a error while processing your request")
 	bot.Send(rsp)
 }

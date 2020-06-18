@@ -6,3 +6,9 @@ type Options struct {
 	DbConnection string
 	Debug        bool
 }
+
+// Feed represents feed db table structure
+type Feed struct {
+	Name string
+	URI  string
+}
