@@ -8,7 +8,7 @@ import (
 
 // Database is concrete implementation for the PostgreSql
 type Database struct {
-	Address    string
-	Connection *pgxpool.Pool
+	Connection string
+	Pool       *pgxpool.Pool
 	Context    context.Context
 }

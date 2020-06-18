@@ -12,7 +12,7 @@ import (
 )
 
 var bot *tgbotapi.BotAPI
-var db database.Database
+var db *database.Database
 
 // Start will call for bot instance and process update messages
 func Start(options Options) {
@@ -37,6 +37,9 @@ func Start(options Options) {
 		log.Print("WARN System interrupt signal")
 		cancel()
 	}()
+
+	// Set db connection settings
+	db = &database.Database{Connection: options.Connection}
 
 	// Read commands from users
 	log.Print("INFO Start updates processing")
@@ -67,7 +70,7 @@ func handleRequest(update tgbotapi.Update) {
 		return
 	}
 
-	log.Printf("ERROR command '%s' completed with error: %s", msg.Text, err)
+	log.Printf("ERROR command '%s' completed with error: '%s'", msg.Text, err)
 	rsp := tgbotapi.NewMessage(msg.Chat.ID, "Sorry we have a error while processing your request")
 	bot.Send(rsp)
 }

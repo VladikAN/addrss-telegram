@@ -13,7 +13,10 @@ func runCommand(msg *tgbotapi.Message) (string, error) {
 		args := msg.CommandArguments()
 
 		// Use db connections pools
-		db.Open()
+		err := db.Open()
+		if err != nil {
+			return "", err
+		}
 		defer db.Close()
 
 		// Run command itself
@@ -35,17 +38,33 @@ func runCommand(msg *tgbotapi.Message) (string, error) {
 }
 
 func start(id int) (string, error) {
-	return "", nil
+	return toText("start-success", nil), nil
 }
 
-func add(it int, uris []string) (string, error) {
+func add(id int, uris []string) (string, error) {
 	if len(uris) == 0 {
 		return toText("add-validation", nil), nil
 	}
 
 	trg := uris[0] // will use only one for now
+	query := `INSERT INTO feeds (name, uri) VALUES ($1, $2) ON CONFLICT (uri) DO NOTHING`
+	_, err := db.Pool.Exec(db.Context, query, "TODO name", trg)
+	if err != nil {
+		return "", err
+	}
 
-	// TODO
+	query = `SELECT id FROM feeds WHERE uri = $1`
+	var feedID int
+	err = db.Pool.QueryRow(db.Context, query, trg).Scan(&feedID)
+	if err != nil {
+		return "", err
+	}
+
+	query = `INSERT INTO userfeeds (user_id, feed_id) VALUES ($1, $2) ON CONFLICT (user_id, feed_id) DO NOTHING`
+	_, err = db.Pool.Exec(db.Context, query, id, feedID)
+	if err != nil {
+		return "", err
+	}
 
 	return toText("add-success", nil), nil
 }
@@ -58,7 +77,7 @@ func remove(id int, uris []string) (string, error) {
 	trg := uris[0] // will use only one for now
 	query := `DELETE FROM userfeeds
 	WHERE user_id = $1 AND feed_id = (SELECT TOP(1) id FROM feeds WHERE uri = $2)`
-	_, err := db.Connection.Exec(db.Context, query, id, trg)
+	_, err := db.Pool.Exec(db.Context, query, id, trg)
 	if err != nil {
 		return "", err
 	}
@@ -72,15 +91,19 @@ func list(id int) (string, error) {
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
 
-	rows, err := db.Connection.Query(db.Context, query, id)
+	rows, err := db.Pool.Query(db.Context, query, id)
 	if err != nil {
 		return "", err
 	}
 
 	var feeds []Feed
-	err = rows.Scan(&feeds)
-	if err != nil {
-		return "", err
+	for rows.Next() {
+		var name, uri string
+		err = rows.Scan(&name, &uri)
+		if err != nil {
+			return "", err
+		}
+		feeds = append(feeds, Feed{Name: name, URI: uri})
 	}
 
 	if len(feeds) == 0 {
