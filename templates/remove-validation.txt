@@ -1,5 +1,5 @@
-Please specify uri to remove.
+Please specify URI to remove it.
 
 /remove https://example.com/feed.rss
 
-URI starts with http or https.
+URI starts with http:// or https://.

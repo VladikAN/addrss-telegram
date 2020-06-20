@@ -1,5 +1,5 @@
-Please specify uri to add.
+Feed '{{.}}' successfully added to subscriptions. Please specify URI to add.
 
 /add https://example.com/feed.rss
 
-URI starts with http or https.
+URI starts with http:// or https://.
