@@ -1,1 +1,1 @@
-Feed successfully removed from subscriptions.
+Feed '{{.}}' successfully removed from subscriptions.

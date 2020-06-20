@@ -1,1 +1,1 @@
-Feed successfully added to subscriptions.
+Feed '{{.}}' successfully added to subscriptions.

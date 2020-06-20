@@ -53,9 +53,10 @@ func add(id int, uris []string) (string, error) {
 		return "", err
 	}
 
-	query = `SELECT id FROM feeds WHERE uri = $1`
 	var feedID int
-	err = db.Pool.QueryRow(db.Context, query, trg).Scan(&feedID)
+	var name string
+	query = `SELECT id, name FROM feeds WHERE uri = $1`
+	err = db.Pool.QueryRow(db.Context, query, trg).Scan(&feedID, &name)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +67,7 @@ func add(id int, uris []string) (string, error) {
 		return "", err
 	}
 
-	return toText("add-success", nil), nil
+	return toText("add-success", name), nil
 }
 
 func remove(id int, uris []string) (string, error) {
@@ -75,14 +76,34 @@ func remove(id int, uris []string) (string, error) {
 	}
 
 	trg := uris[0] // will use only one for now
-	query := `DELETE FROM userfeeds
-	WHERE user_id = $1 AND feed_id = (SELECT TOP(1) id FROM feeds WHERE uri = $2)`
-	_, err := db.Pool.Exec(db.Context, query, id, trg)
+
+	query := `SELECT f.id, f.name FROM userfeeds uf
+	INNER JOIN feeds f ON f.id = uf.feed_id
+	WHERE uf.user_id = $1 AND f.uri = $2`
+	rows, err := db.Pool.Query(db.Context, query, id, trg)
+	defer rows.Close()
+
 	if err != nil {
 		return "", err
 	}
 
-	return toText("remove-success", nil), nil
+	if !rows.Next() {
+		return toText("remove-no-rows", nil), nil
+	}
+
+	var feedID int
+	var name string
+	if err := rows.Scan(&feedID, &name); err != nil {
+		return "", err
+	}
+
+	query = `DELETE FROM userfeeds WHERE user_id = $1 AND feed_id = $2`
+	_, err = db.Pool.Exec(db.Context, query, id, feedID)
+	if err != nil {
+		return "", err
+	}
+
+	return toText("remove-success", name), nil
 }
 
 func list(id int) (string, error) {
@@ -92,6 +113,7 @@ func list(id int) (string, error) {
 	ORDER BY uf.added`
 
 	rows, err := db.Pool.Query(db.Context, query, id)
+	defer rows.Close()
 	if err != nil {
 		return "", err
 	}
