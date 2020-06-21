@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jackc/pgx/v4"
+	"github.com/vladikan/feedreader-telegrambot/parser"
 )
 
 func runCommand(msg *tgbotapi.Message) (string, error) {
@@ -27,7 +29,7 @@ func runCommand(msg *tgbotapi.Message) (string, error) {
 		case "add":
 			return add(msg.From.ID, splitURI(args))
 		case "remove":
-			return remove(msg.From.ID, splitURI(args))
+			return remove(msg.From.ID, splitNonEmpty(args))
 		case "list":
 			return list(msg.From.ID)
 		case "read":
@@ -47,35 +49,39 @@ func add(userID int, uris []string) (string, error) {
 		return toText("add-validation", nil), nil
 	}
 
-	trg := uris[0] // will use only one for now
-	if userFeed, err := getUserFeed(userID, trg); err != nil {
+	uri := uris[0] // will use only one for now
+	if userFeed, err := getUserFeed(userID, uri); err != nil {
 		return "", err
 	} else if userFeed != nil {
-		return toText("add-exists", userFeed), err
+		return toText("add-exists", userFeed), nil
 	}
 
-	feed, err := getFeed(trg)
+	feed, err := getFeed(uri)
 	if err != nil {
 		return "", err
 	}
 
 	if feed == nil {
-		//TODO parse name
-
-		query := `INSERT INTO feeds (name, uri) VALUES ($1, $2) ON CONFLICT (uri) DO NOTHING`
-		_, err := db.Pool.Exec(db.Context, query, "TODO name", trg)
+		title, err := parser.GetFeed(uri)
 		if err != nil {
 			return "", err
 		}
 
-		feed, err = getFeed(trg)
+		query := `INSERT INTO feeds (name, normalized, uri) VALUES ($1, $2, $3) ON CONFLICT (uri) DO NOTHING`
+		_, err = db.Pool.Exec(db.Context, query, title, normalize(title), uri)
+		if err != nil {
+			return "", err
+		}
+
+		feed, err = getFeed(uri)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	query := `INSERT INTO userfeeds (user_id, feed_id) VALUES ($1, $2) ON CONFLICT (user_id, feed_id) DO NOTHING`
-	_, err = db.Pool.Exec(db.Context, query, userID, feed.ID)
+	updated := time.Now().AddDate(0, 0, -1)
+	query := `INSERT INTO userfeeds (user_id, feed_id, updated) VALUES ($1, $2, $3) ON CONFLICT (user_id, feed_id) DO NOTHING`
+	_, err = db.Pool.Exec(db.Context, query, userID, feed.ID, updated)
 	if err != nil {
 		return "", err
 	}
@@ -83,13 +89,13 @@ func add(userID int, uris []string) (string, error) {
 	return toText("add-success", feed), nil
 }
 
-func remove(userID int, uris []string) (string, error) {
-	if len(uris) == 0 {
+func remove(userID int, names []string) (string, error) {
+	if len(names) == 0 {
 		return toText("remove-validation", nil), nil
 	}
 
-	trg := uris[0] // will use only one for now
-	feed, err := getUserFeed(userID, trg)
+	name := names[0] // will use only one for now
+	feed, err := getUserNormalizedFeed(userID, name)
 
 	if err != nil {
 		return "", err
@@ -109,7 +115,7 @@ func remove(userID int, uris []string) (string, error) {
 }
 
 func list(userID int) (string, error) {
-	query := `SELECT f.name, f.uri FROM userfeeds uf
+	query := `SELECT f.name, f.normalized, f.uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
@@ -122,12 +128,12 @@ func list(userID int) (string, error) {
 
 	var feeds []Feed
 	for rows.Next() {
-		var name, uri string
-		err = rows.Scan(&name, &uri)
+		var name, normalized, uri string
+		err = rows.Scan(&name, &normalized, &uri)
 		if err != nil {
 			return "", err
 		}
-		feeds = append(feeds, Feed{Name: name, URI: uri})
+		feeds = append(feeds, Feed{Name: name, Normalized: normalized, URI: uri})
 	}
 
 	if len(feeds) == 0 {
@@ -142,7 +148,7 @@ func read(userID int, names []string) (string, error) {
 }
 
 func getUserFeed(userID int, uri string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.uri FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
 	LIMIT 1`
@@ -157,8 +163,24 @@ func getUserFeed(userID int, uri string) (*Feed, error) {
 	return rowToFeed(rows)
 }
 
+func getUserNormalizedFeed(userID int, normalized string) (*Feed, error) {
+	query := `SELECT f.id, f.name, f.normalized, f.uri FROM userfeeds uf
+	INNER JOIN feeds f ON f.id = uf.feed_id
+	WHERE uf.user_id = $1 AND f.normalized = $2
+	LIMIT 1`
+
+	rows, err := db.Pool.Query(db.Context, query, userID, normalized)
+	defer rows.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rowToFeed(rows)
+}
+
 func getFeed(uri string) (*Feed, error) {
-	query := `SELECT id, name, uri
+	query := `SELECT id, name, normalized, uri
 	FROM feeds
 	WHERE uri = $1
 	LIMIT 1`
@@ -180,10 +202,11 @@ func rowToFeed(rows pgx.Rows) (*Feed, error) {
 
 	var feedID int
 	var name string
+	var normalized string
 	var uri string
 
-	if err := rows.Scan(&feedID, &name, &uri); err == nil {
-		return &Feed{ID: feedID, Name: name, URI: uri}, err
+	if err := rows.Scan(&feedID, &name, &normalized, &uri); err == nil {
+		return &Feed{ID: feedID, Name: name, Normalized: normalized, URI: uri}, err
 	} else if err != nil {
 		return nil, err
 	}

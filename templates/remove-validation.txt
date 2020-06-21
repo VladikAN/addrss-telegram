@@ -1,5 +1,5 @@
 Please specify URI to remove it.
 
-/remove https://example.com/feed.rss
+/remove [name]
 
-URI starts with http:// or https://.
+Use /list to see subscription names.

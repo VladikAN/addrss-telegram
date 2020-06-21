@@ -9,7 +9,8 @@ type Options struct {
 
 // Feed represents feed db table structure
 type Feed struct {
-	ID   int
-	Name string
-	URI  string
+	ID         int
+	Name       string
+	Normalized string
+	URI        string
 }

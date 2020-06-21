@@ -1,8 +1,8 @@
 Active subscriptions:
-
 {{range .}}
 {{.Name}}
+/read {{.Normalized}} - print latest posts.
+/remove {{.Normalized}} - unsubscribe from feed.
 {{end}}
-
 Use /read to read all subscriptions.
 Or use /read [name1] [name2] to read only mentioned subscriptions.

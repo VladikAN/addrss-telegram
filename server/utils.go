@@ -5,6 +5,17 @@ import (
 	"strings"
 )
 
+func normalize(in string) string {
+	rg, _ := regexp.Compile("[^\\w \\.\\-]+")
+	nrm := rg.ReplaceAllString(in, "")
+
+	rg, _ = regexp.Compile("\\s+")
+	nrm = rg.ReplaceAllString(nrm, " ")
+	nrm = strings.ReplaceAll(nrm, " ", "-")
+
+	return nrm
+}
+
 func splitURI(in string) []string {
 	raw := splitNonEmpty(in)
 	rg, _ := regexp.Compile("http(s)?://[\\w\\d\\.\\-]+/[\\w\\d\\.\\-\\?\\&\\/\\=]+")

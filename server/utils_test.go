@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+func TestNormalize(t *testing.T) {
+	exp := "1-test.com-normalize"
+	rst := normalize("1 test.com &+ normalize")
+	if rst != exp {
+		t.Errorf("Expected to be '%s', but was '%s'", exp, rst)
+	}
+}
+
 func TestSpliURINonUri(t *testing.T) {
 	rst := splitURI("baduri")
 	if len(rst) != 0 {

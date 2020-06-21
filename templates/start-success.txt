@@ -2,7 +2,7 @@ Bot will send your fresh updates by a list of the RSS subscriptions.
 
 Use /list to see a list of the active subscriptions.
 Call /add [uri] to add a new subscription to the list. URI must start with the http:// or https://.
-Type /remove [uri] to remove the subscription from the list.
+Type /remove [name] to remove the subscription from the list.
 And /read to get all updates from the feeds.
 
 This message can be repeated by /start command.
