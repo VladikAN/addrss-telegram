@@ -13,9 +13,11 @@ import (
 
 // Options holds all necessary settings for the app
 type Options struct {
-	Token      string
-	Connection string
-	Debug      bool
+	Token          string
+	Connection     string
+	Debug          bool
+	ReaderInterval int
+	ReaderFeeds    int
 }
 
 var bot *tgbotapi.BotAPI
@@ -30,12 +32,12 @@ func Start(options Options) {
 
 	bot = bt
 	bot.Debug = options.Debug
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	log.Printf("INFO Authorized on account %s", bot.Self.UserName)
 
 	cfg := tgbotapi.NewUpdate(0)
 	cfg.Timeout = 60
 
-	// Hook for system signal
+	// Hook for system terminate signal
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		stop := make(chan os.Signal, 1)
@@ -47,16 +49,23 @@ func Start(options Options) {
 
 	// Set db connection settings and use pool
 	db = &database.Database{Connection: options.Connection}
-	err = db.Open()
+	err = db.Open(ctx)
 	if err != nil {
-		log.Printf("PANIC Error while connection to the database: %s", err)
+		log.Printf("PANIC Error while connecting to the database: %s", err)
 	}
 	defer db.Close()
 
+	// Start reader
+	reader := &Reader{Interval: options.ReaderInterval, Feeds: options.ReaderFeeds, DB: db}
+	reader.Start()
+	defer reader.Stop()
+
 	// Read commands from users
-	log.Print("INFO Start updates processing")
 	updates, err := bot.GetUpdatesChan(cfg)
+	defer bot.StopReceivingUpdates()
+
 	go func() {
+		log.Print("INFO Start updates processing")
 		for update := range updates {
 			handleRequest(update)
 		}
@@ -64,8 +73,7 @@ func Start(options Options) {
 
 	// Stop bot operations and close db connection
 	<-ctx.Done()
-	log.Print("INFO Stop updates processing")
-	bot.StopReceivingUpdates()
+	log.Print("INFO Stopped updates processing")
 }
 
 func handleRequest(update tgbotapi.Update) {

@@ -14,8 +14,7 @@ type Database struct {
 }
 
 // Open will start database connection. Should be called first
-func (db *Database) Open() error {
-	ctx := context.Background()
+func (db *Database) Open(ctx context.Context) error {
 	pool, err := pgxpool.Connect(ctx, db.Connection)
 	if err != nil {
 		return err
