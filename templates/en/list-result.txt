@@ -1,6 +1,6 @@
 Active subscriptions:
 {{range .}}
-{{.Name}}
+<b>{{.Name}}</b>
 /read {{.Normalized}} - print latest posts.
 /remove {{.Normalized}} - unsubscribe from feed.
 {{end}}

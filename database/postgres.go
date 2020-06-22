@@ -6,6 +6,13 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+// Database is concrete implementation for the PostgreSql
+type Database struct {
+	Connection string
+	Pool       *pgxpool.Pool
+	Context    context.Context
+}
+
 // Open will start database connection. Should be called first
 func (db *Database) Open() error {
 	ctx := context.Background()

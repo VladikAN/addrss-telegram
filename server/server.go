@@ -11,6 +11,13 @@ import (
 	"github.com/vladikan/feedreader-telegrambot/database"
 )
 
+// Options holds all necessary settings for the app
+type Options struct {
+	Token      string
+	Connection string
+	Debug      bool
+}
+
 var bot *tgbotapi.BotAPI
 var db *database.Database
 
@@ -65,6 +72,8 @@ func handleRequest(update tgbotapi.Update) {
 	txt, err := runCommand(msg)
 	if err == nil {
 		rsp := tgbotapi.NewMessage(msg.Chat.ID, txt)
+		rsp.ParseMode = "HTML"
+
 		bot.Send(rsp)
 
 		return

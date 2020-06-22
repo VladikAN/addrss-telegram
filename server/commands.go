@@ -1,15 +1,21 @@
 package server
 
 import (
-	"bytes"
-	"fmt"
-	"text/template"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jackc/pgx/v4"
 	"github.com/vladikan/feedreader-telegrambot/parser"
+	"github.com/vladikan/feedreader-telegrambot/templates"
 )
+
+// Feed represents feed db table structure
+type Feed struct {
+	ID         int
+	Name       string
+	Normalized string
+	URI        string
+}
 
 func runCommand(msg *tgbotapi.Message) (string, error) {
 	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
@@ -41,19 +47,19 @@ func runCommand(msg *tgbotapi.Message) (string, error) {
 }
 
 func start(userID int) (string, error) {
-	return toText("start-success", nil), nil
+	return templates.ToText("start-success"), nil
 }
 
 func add(userID int, uris []string) (string, error) {
 	if len(uris) == 0 {
-		return toText("add-validation", nil), nil
+		return templates.ToText("add-validation"), nil
 	}
 
 	uri := uris[0] // will use only one for now
 	if userFeed, err := getUserFeed(userID, uri); err != nil {
 		return "", err
 	} else if userFeed != nil {
-		return toText("add-exists", userFeed), nil
+		return templates.ToTextW("add-exists", userFeed), nil
 	}
 
 	feed, err := getFeed(uri)
@@ -86,12 +92,12 @@ func add(userID int, uris []string) (string, error) {
 		return "", err
 	}
 
-	return toText("add-success", feed), nil
+	return templates.ToTextW("add-success", feed), nil
 }
 
 func remove(userID int, names []string) (string, error) {
 	if len(names) == 0 {
-		return toText("remove-validation", nil), nil
+		return templates.ToText("remove-validation"), nil
 	}
 
 	name := names[0] // will use only one for now
@@ -102,7 +108,7 @@ func remove(userID int, names []string) (string, error) {
 	}
 
 	if feed == nil {
-		return toText("remove-no-rows", nil), nil
+		return templates.ToText("remove-no-rows"), nil
 	}
 
 	query := `DELETE FROM userfeeds WHERE user_id = $1 AND feed_id = $2`
@@ -111,7 +117,7 @@ func remove(userID int, names []string) (string, error) {
 		return "", err
 	}
 
-	return toText("remove-success", feed), nil
+	return templates.ToTextW("remove-success", feed), nil
 }
 
 func list(userID int) (string, error) {
@@ -137,10 +143,10 @@ func list(userID int) (string, error) {
 	}
 
 	if len(feeds) == 0 {
-		return toText("list-empty", nil), nil
+		return templates.ToText("list-empty"), nil
 	}
 
-	return toText("list-result", feeds), nil
+	return templates.ToTextW("list-result", feeds), nil
 }
 
 func read(userID int, names []string) (string, error) {
@@ -212,12 +218,4 @@ func rowToFeed(rows pgx.Rows) (*Feed, error) {
 	}
 
 	return nil, nil
-}
-
-func toText(name string, data interface{}) string {
-	var tpl bytes.Buffer
-	help, _ := template.ParseFiles(fmt.Sprintf("templates/%s.txt", name))
-	help.Execute(&tpl, data)
-
-	return tpl.String()
 }
