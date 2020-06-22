@@ -1,8 +1,7 @@
 package server
 
 import (
-	"time"
-
+	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jackc/pgx/v4"
 	"github.com/vladikan/feedreader-telegrambot/parser"
@@ -17,49 +16,61 @@ type Feed struct {
 	URI        string
 }
 
-func runCommand(msg *tgbotapi.Message) (string, error) {
+// Command is used for propper method execution
+type Command struct {
+	UserID int
+	Args   []string
+}
+
+func runCommand(msg *tgbotapi.Message) string {
+	var response string
+	var err error
+
 	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
+		command := &Command{UserID: msg.From.ID}
 		args := msg.CommandArguments()
 
-		// Use db connections pools
-		err := db.Open()
-		if err != nil {
-			return "", err
-		}
-		defer db.Close()
-
-		// Run command itself
 		switch cmd {
 		case "start":
-			return start(msg.From.ID)
+			response, err = command.start()
 		case "add":
-			return add(msg.From.ID, splitURI(args))
+			command.Args = splitURI(args)
+			response, err = command.add()
 		case "remove":
-			return remove(msg.From.ID, splitNonEmpty(args))
+			command.Args = splitNonEmpty(args)
+			response, err = command.remove()
 		case "list":
-			return list(msg.From.ID)
-		case "read":
-			return read(msg.From.ID, splitNonEmpty(args))
+			response, err = command.list()
 		}
 	}
 
-	return "Sorry, command is unknown", nil
-}
-
-func start(userID int) (string, error) {
-	return templates.ToText("start-success"), nil
-}
-
-func add(userID int, uris []string) (string, error) {
-	if len(uris) == 0 {
-		return templates.ToText("add-validation"), nil
+	if err != nil {
+		log.Printf("ERROR user %d command '%s' completed with error: '%s'", msg.From.ID, msg.Text, err)
+		response, _ = templates.ToText("cmd-error")
 	}
 
-	uri := uris[0] // will use only one for now
-	if userFeed, err := getUserFeed(userID, uri); err != nil {
+	if len(response) == 0 {
+		log.Printf("WARN command '%s' is unknown", msg.Text)
+		response, _ = templates.ToText("cmd-unknown")
+	}
+
+	return response
+}
+
+func (cmd *Command) start() (string, error) {
+	return templates.ToText("start-success")
+}
+
+func (cmd *Command) add() (string, error) {
+	if len(cmd.Args) == 0 {
+		return templates.ToText("add-validation")
+	}
+
+	uri := cmd.Args[0] // will use only one for now
+	if userFeed, err := getUserFeed(cmd.UserID, uri); err != nil {
 		return "", err
 	} else if userFeed != nil {
-		return templates.ToTextW("add-exists", userFeed), nil
+		return templates.ToTextW("add-exists", userFeed)
 	}
 
 	feed, err := getFeed(uri)
@@ -85,48 +96,47 @@ func add(userID int, uris []string) (string, error) {
 		}
 	}
 
-	updated := time.Now().AddDate(0, 0, -1)
-	query := `INSERT INTO userfeeds (user_id, feed_id, updated) VALUES ($1, $2, $3) ON CONFLICT (user_id, feed_id) DO NOTHING`
-	_, err = db.Pool.Exec(db.Context, query, userID, feed.ID, updated)
+	query := `INSERT INTO userfeeds (user_id, feed_id) VALUES ($1, $2) ON CONFLICT (user_id, feed_id) DO NOTHING`
+	_, err = db.Pool.Exec(db.Context, query, cmd.UserID, feed.ID)
 	if err != nil {
 		return "", err
 	}
 
-	return templates.ToTextW("add-success", feed), nil
+	return templates.ToTextW("add-success", feed)
 }
 
-func remove(userID int, names []string) (string, error) {
-	if len(names) == 0 {
-		return templates.ToText("remove-validation"), nil
+func (cmd *Command) remove() (string, error) {
+	if len(cmd.Args) == 0 {
+		return templates.ToText("remove-validation")
 	}
 
-	name := names[0] // will use only one for now
-	feed, err := getUserNormalizedFeed(userID, name)
+	name := cmd.Args[0] // will use only one for now
+	feed, err := getUserNormalizedFeed(cmd.UserID, name)
 
 	if err != nil {
 		return "", err
 	}
 
 	if feed == nil {
-		return templates.ToText("remove-no-rows"), nil
+		return templates.ToText("remove-no-rows")
 	}
 
 	query := `DELETE FROM userfeeds WHERE user_id = $1 AND feed_id = $2`
-	_, err = db.Pool.Exec(db.Context, query, userID, feed.ID)
+	_, err = db.Pool.Exec(db.Context, query, cmd.UserID, feed.ID)
 	if err != nil {
 		return "", err
 	}
 
-	return templates.ToTextW("remove-success", feed), nil
+	return templates.ToTextW("remove-success", feed)
 }
 
-func list(userID int) (string, error) {
+func (cmd *Command) list() (string, error) {
 	query := `SELECT f.name, f.normalized, f.uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
 
-	rows, err := db.Pool.Query(db.Context, query, userID)
+	rows, err := db.Pool.Query(db.Context, query, cmd.UserID)
 	defer rows.Close()
 	if err != nil {
 		return "", err
@@ -143,14 +153,10 @@ func list(userID int) (string, error) {
 	}
 
 	if len(feeds) == 0 {
-		return templates.ToText("list-empty"), nil
+		return templates.ToText("list-empty")
 	}
 
-	return templates.ToTextW("list-result", feeds), nil
-}
-
-func read(userID int, names []string) (string, error) {
-	return "", nil
+	return templates.ToTextW("list-result", feeds)
 }
 
 func getUserFeed(userID int, uri string) (*Feed, error) {

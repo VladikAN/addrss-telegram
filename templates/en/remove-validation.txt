@@ -1,4 +1,4 @@
-Please specify URI to remove it.
+Please specify name to remove.
 
 /remove [name]
 

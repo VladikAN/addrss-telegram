@@ -45,8 +45,13 @@ func Start(options Options) {
 		cancel()
 	}()
 
-	// Set db connection settings
+	// Set db connection settings and use pool
 	db = &database.Database{Connection: options.Connection}
+	err = db.Open()
+	if err != nil {
+		log.Printf("PANIC Error while connection to the database: %s", err)
+	}
+	defer db.Close()
 
 	// Read commands from users
 	log.Print("INFO Start updates processing")
@@ -69,17 +74,9 @@ func handleRequest(update tgbotapi.Update) {
 	}
 
 	msg := update.Message
-	txt, err := runCommand(msg)
-	if err == nil {
-		rsp := tgbotapi.NewMessage(msg.Chat.ID, txt)
-		rsp.ParseMode = "HTML"
+	txt := runCommand(msg)
 
-		bot.Send(rsp)
-
-		return
-	}
-
-	log.Printf("ERROR command '%s' completed with error: '%s'", msg.Text, err)
-	rsp := tgbotapi.NewMessage(msg.Chat.ID, "Sorry we have a error while processing your request")
+	rsp := tgbotapi.NewMessage(msg.Chat.ID, txt)
+	rsp.ParseMode = "HTML"
 	bot.Send(rsp)
 }
