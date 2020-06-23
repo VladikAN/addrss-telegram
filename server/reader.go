@@ -4,7 +4,11 @@ import (
 	"time"
 
 	log "github.com/go-pkgz/lgr"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+
 	"github.com/vladikan/feedreader-telegrambot/database"
+	"github.com/vladikan/feedreader-telegrambot/parser"
+	"github.com/vladikan/feedreader-telegrambot/templates"
 )
 
 // Reader holds reader settings
@@ -52,35 +56,31 @@ func (rd *Reader) Stop() {
 
 func (rd *Reader) readFeeds() error {
 	log.Printf("INFO Reader job started. %d feeds to be readed", rd.Feeds)
-
-	now := time.Now()
 	duration := time.Duration(rd.Interval) * time.Second
 
 	// Read feeds from db
-	query := `SELECT id, uri FROM feeds WHERE healthy = TRUE ORDER BY updated LIMIT $1`
-	rows, err := rd.DB.Pool.Query(db.Context, query, rd.Feeds)
+	feeds, err := db.GetForUpdate(rd.Feeds)
 	if err != nil {
 		return err
 	}
 
-	// Map db records
-	var feeds []feed
-	for rows.Next() {
-		var id int
-		var uri string
-		err = rows.Scan(&id, &uri)
+	// Read feeds from web
+	for _, feed := range feeds {
+		updates, err := parser.GetUpdates(feed.URI, *feed.Updated)
 		if err != nil {
 			return err
 		}
 
-		feeds = append(feeds, feed{id: id, uri: uri})
-	}
+		if len(updates) > 0 {
+			users, err := db.GetFeedUsers(feed.ID)
+			if err != nil {
+				return err
+			}
 
-	// Read feeds from web
-	for _, feed := range feeds {
+			rd.sendUpdates(updates, users)
+		}
 
-		query = `UPDATE feeds SET updated = $1 WHERE id = $2`
-		_, err = rd.DB.Pool.Exec(db.Context, query, &now, &feed.id)
+		err = db.SetFeedUpdated(feed.ID)
 		if err != nil {
 			return err
 		}
@@ -88,4 +88,16 @@ func (rd *Reader) readFeeds() error {
 
 	log.Printf("INFO Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
 	return nil
+}
+
+func (rd *Reader) sendUpdates(updates []parser.Topic, users []database.UserFeed) {
+	for _, upd := range updates {
+		txt, _ := templates.ToTextW("topic", upd)
+
+		for _, usr := range users {
+			msg := tgbotapi.NewMessage(usr.UserID, txt)
+			msg.ParseMode = "HTML"
+			bot.Send(msg)
+		}
+	}
 }

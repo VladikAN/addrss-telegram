@@ -7,7 +7,7 @@ import (
 
 func TestNormalize(t *testing.T) {
 	exp := "1-test.com-normalize"
-	rst := normalize("1 test.com &+ normalize")
+	rst := normalize("1 TEST.com &+ normalize")
 	if rst != exp {
 		t.Errorf("Expected to be '%s', but was '%s'", exp, rst)
 	}
