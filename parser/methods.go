@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"sort"
 	"time"
 
+	"github.com/k3a/html2text"
 	"github.com/mmcdole/gofeed"
 )
 
@@ -33,15 +35,18 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 		return nil, err
 	}
 
+	sort.Sort(feed) // sort from old to new
+
 	var topics []Topic
 	for _, item := range feed.Items {
 		if item.UpdatedParsed.Before(since) {
 			continue
 		}
 
+		text := html2text.HTML2Text(item.Content)
 		topic := Topic{
 			Title: item.Title,
-			Text:  item.Content,
+			Text:  text,
 			URI:   item.Link,
 		}
 		topics = append(topics, topic)

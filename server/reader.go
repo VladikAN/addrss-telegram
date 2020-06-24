@@ -4,7 +4,6 @@ import (
 	"time"
 
 	log "github.com/go-pkgz/lgr"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 
 	"github.com/vladikan/feedreader-telegrambot/database"
 	"github.com/vladikan/feedreader-telegrambot/parser"
@@ -16,13 +15,9 @@ type Reader struct {
 	Interval int
 	Feeds    int
 	DB       *database.Database
+	Outbox   chan Reply
 
 	stop chan interface{}
-}
-
-type feed struct {
-	id  int
-	uri string
 }
 
 // Start will look for feed updates
@@ -68,6 +63,7 @@ func (rd *Reader) readFeeds() error {
 	for _, feed := range feeds {
 		updates, err := parser.GetUpdates(feed.URI, *feed.Updated)
 		if err != nil {
+			db.SetFeedBroken(feed.ID)
 			return err
 		}
 
@@ -77,6 +73,7 @@ func (rd *Reader) readFeeds() error {
 				return err
 			}
 
+			log.Printf("INFO Reader found updates for '%s', sending to %d subscriptions", feed.Normalized, len(users))
 			rd.sendUpdates(updates, users)
 		}
 
@@ -95,9 +92,7 @@ func (rd *Reader) sendUpdates(updates []parser.Topic, users []database.UserFeed)
 		txt, _ := templates.ToTextW("topic", upd)
 
 		for _, usr := range users {
-			msg := tgbotapi.NewMessage(usr.UserID, txt)
-			msg.ParseMode = "HTML"
-			bot.Send(msg)
+			rd.Outbox <- Reply{ChatID: usr.UserID, Text: txt}
 		}
 	}
 }

@@ -20,6 +20,12 @@ type Options struct {
 	ReaderFeeds    int
 }
 
+// Reply is a message to be sent to user/chat
+type Reply struct {
+	ChatID int64
+	Text   string
+}
+
 var bot *tgbotapi.BotAPI
 var db *database.Database
 
@@ -53,38 +59,50 @@ func Start(options Options) {
 	if err != nil {
 		log.Printf("PANIC Error while connecting to the database: %s", err)
 	}
-	defer db.Close()
+
+	// Init messages channel
+	outbox := make(chan Reply)
+	go handleOutbox(outbox)
 
 	// Start reader
-	reader := &Reader{Interval: options.ReaderInterval, Feeds: options.ReaderFeeds, DB: db}
+	reader := &Reader{Interval: options.ReaderInterval, Feeds: options.ReaderFeeds, DB: db, Outbox: outbox}
 	reader.Start()
-	defer reader.Stop()
 
 	// Read commands from users
 	updates, err := bot.GetUpdatesChan(cfg)
-	defer bot.StopReceivingUpdates()
+	go handleRequests(updates, outbox)
 
-	go func() {
-		log.Print("INFO Start updates processing")
-		for update := range updates {
-			handleRequest(update)
-		}
-	}()
-
-	// Stop bot operations and close db connection
+	// Stop bot operations and close all connections
 	<-ctx.Done()
+
+	reader.Stop()
+	bot.StopReceivingUpdates()
+	db.Close()
+	close(outbox)
+
 	log.Print("INFO Stopped updates processing")
 }
 
-func handleRequest(update tgbotapi.Update) {
-	if update.Message == nil {
-		return
+func handleRequests(updates tgbotapi.UpdatesChannel, outbox chan Reply) {
+	log.Print("INFO Start updates processing")
+	for update := range updates {
+		if update.Message == nil {
+			return
+		}
+
+		msg := update.Message
+		txt := runCommand(msg)
+		outbox <- Reply{ChatID: msg.Chat.ID, Text: txt}
 	}
+}
 
-	msg := update.Message
-	txt := runCommand(msg)
+func handleOutbox(outbox chan Reply) {
+	for msg := range outbox {
+		rsp := tgbotapi.NewMessage(msg.ChatID, msg.Text)
+		rsp.ParseMode = "HTML"
 
-	rsp := tgbotapi.NewMessage(msg.Chat.ID, txt)
-	rsp.ParseMode = "HTML"
-	bot.Send(rsp)
+		if _, err := bot.Send(rsp); err != nil {
+			log.Printf("ERROR Problem while replying on %d chat: %s", msg.ChatID, err)
+		}
+	}
 }

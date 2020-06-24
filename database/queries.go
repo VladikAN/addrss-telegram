@@ -18,7 +18,7 @@ type Feed struct {
 
 // UserFeed represents user subscription to the feed
 type UserFeed struct {
-	UserID int
+	UserID int64
 	FeedID int
 	Added  *time.Time
 }
@@ -35,21 +35,21 @@ func (db *Database) AddFeed(name string, normalized string, uri string) (*Feed, 
 }
 
 // Subscribe bind relation between user and feed
-func (db *Database) Subscribe(userID int, feedID int) error {
+func (db *Database) Subscribe(userID int64, feedID int) error {
 	query := `INSERT INTO userfeeds (user_id, feed_id) VALUES ($1, $2) ON CONFLICT (user_id, feed_id) DO NOTHING`
 	_, err := db.Pool.Exec(db.Context, query, userID, feedID)
 	return err
 }
 
 // Unsubscribe unbind relation between user and feed
-func (db *Database) Unsubscribe(userID int, feedID int) error {
+func (db *Database) Unsubscribe(userID int64, feedID int) error {
 	query := `DELETE FROM userfeeds WHERE user_id = $1 AND feed_id = $2`
 	_, err := db.Pool.Exec(db.Context, query, userID, feedID)
 	return err
 }
 
 // GetUserFeeds gets user subscriptions
-func (db *Database) GetUserFeeds(userID int) ([]Feed, error) {
+func (db *Database) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
 	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy FROM userfeeds uf
@@ -67,7 +67,7 @@ func (db *Database) GetUserFeeds(userID int) ([]Feed, error) {
 }
 
 // GetUserURIFeed get user subscription by its uri (unique)
-func (db *Database) GetUserURIFeed(userID int, uri string) (*Feed, error) {
+func (db *Database) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
@@ -78,7 +78,7 @@ func (db *Database) GetUserURIFeed(userID int, uri string) (*Feed, error) {
 }
 
 // GetUserNormalizedFeed get user subscription by its normalized name
-func (db *Database) GetUserNormalizedFeed(userID int, normalized string) (*Feed, error) {
+func (db *Database) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
 	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
@@ -145,6 +145,16 @@ func (db *Database) SetFeedUpdated(id int) error {
 	query := `UPDATE feeds
 	SET updated = $1,
 	healthy = TRUE
+	WHERE id = $2`
+
+	_, err := db.Pool.Exec(db.Context, query, time.Now(), id)
+	return err
+}
+
+// SetFeedBroken update feed by setting healthy to false
+func (db *Database) SetFeedBroken(id int) error {
+	query := `UPDATE feeds
+	SET healthy = TRUE
 	WHERE id = $2`
 
 	_, err := db.Pool.Exec(db.Context, query, time.Now(), id)

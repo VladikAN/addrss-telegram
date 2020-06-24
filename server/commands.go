@@ -9,7 +9,7 @@ import (
 
 // Command is used for propper method execution
 type Command struct {
-	UserID int
+	UserID int64
 	Args   []string
 }
 
@@ -20,7 +20,7 @@ func runCommand(msg *tgbotapi.Message) string {
 	var err error
 
 	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
-		command := &Command{UserID: msg.From.ID}
+		command := &Command{UserID: msg.Chat.ID} // Use chat ID as unique user
 		args := msg.CommandArguments()
 
 		switch cmd {

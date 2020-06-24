@@ -8,7 +8,7 @@ CREATE TABLE feeds(
 );
 
 CREATE TABLE userfeeds(
-    user_id INTEGER NOT NULL,
+    user_id BIGINT NOT NULL,
     feed_id INTEGER NOT NULL,
     added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
