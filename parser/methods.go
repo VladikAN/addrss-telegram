@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"sort"
 	"time"
 
 	"github.com/k3a/html2text"
@@ -35,11 +34,18 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 		return nil, err
 	}
 
-	sort.Sort(feed) // sort from old to new
+	if feed == nil {
+		return nil, nil
+	}
 
 	var topics []Topic
 	for _, item := range feed.Items {
-		if item.UpdatedParsed.Before(since) {
+		tm := item.PublishedParsed
+		if tm == nil {
+			tm = item.UpdatedParsed // not all feeds has publish/update values, will ignore these feeds for now
+		}
+
+		if tm == nil || tm.Before(since) {
 			continue
 		}
 
