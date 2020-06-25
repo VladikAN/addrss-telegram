@@ -28,16 +28,22 @@ func (rd *Reader) Start() {
 	tick := time.NewTicker(duration)
 
 	go func() {
+		read := func() {
+			err := rd.readFeeds()
+			if err != nil {
+				log.Printf("ERROR Reader job completed with error: %s", err)
+			}
+		}
+
+		read() // Force first read on start
+
 		for {
 			select {
 			case <-rd.stop:
 				tick.Stop()
 				return
 			case <-tick.C:
-				err := rd.readFeeds()
-				if err != nil {
-					log.Printf("ERROR Reader job completed with error: %s", err)
-				}
+				read()
 			}
 		}
 	}()
@@ -73,7 +79,7 @@ func (rd *Reader) readFeeds() error {
 				return err
 			}
 
-			log.Printf("INFO Reader found updates for '%s', sending to %d subscriptions", feed.Normalized, len(users))
+			log.Printf("INFO Reader found updates for '%s', sending %d items to %d subscriptions", feed.Normalized, len(updates), len(users))
 			rd.sendUpdates(updates, users)
 		}
 
