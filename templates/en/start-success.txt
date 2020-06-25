@@ -5,4 +5,4 @@ Call /add [uri] to add a new subscription to the list. URI must start with the h
 And /remove [name] to remove the subscription from the list.
 
 This message can be repeated by /start command.
-Source code available at https://github.com/VladikAN/feedreader-telegrambot.
+Source code available at https://github.com/VladikAN/addrss-telegram.

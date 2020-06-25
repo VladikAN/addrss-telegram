@@ -5,9 +5,9 @@ import (
 
 	log "github.com/go-pkgz/lgr"
 
-	"github.com/vladikan/feedreader-telegrambot/database"
-	"github.com/vladikan/feedreader-telegrambot/parser"
-	"github.com/vladikan/feedreader-telegrambot/templates"
+	"github.com/vladikan/addrss-telegram/database"
+	"github.com/vladikan/addrss-telegram/parser"
+	"github.com/vladikan/addrss-telegram/templates"
 )
 
 // Reader holds reader settings

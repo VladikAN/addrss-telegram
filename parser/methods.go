@@ -50,7 +50,9 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 		}
 
 		text := html2text.HTML2Text(item.Description)
-		text := strings.
+		if len(text) > 512 {
+			text = text[:512] + "..."
+		}
 
 		topic := Topic{
 			Title: item.Title,

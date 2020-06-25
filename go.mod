@@ -1,4 +1,4 @@
-module github.com/vladikan/feedreader-telegrambot
+module github.com/vladikan/addrss-telegram
 
 go 1.14
 

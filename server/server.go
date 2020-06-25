@@ -8,7 +8,7 @@ import (
 
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/vladikan/feedreader-telegrambot/database"
+	"github.com/vladikan/addrss-telegram/database"
 )
 
 // Options holds all necessary settings for the app

@@ -9,5 +9,5 @@ services:
       image: vladikan/addrss:latest
       build: .
       environment:
-        - AR_TOKEN=123456789
+        - AR_TOKEN
         - AR_DATABASE=postgres://admin:admin@postgres/feed

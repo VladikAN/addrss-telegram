@@ -3,7 +3,7 @@ package main
 import (
 	log "github.com/go-pkgz/lgr"
 	"github.com/umputun/go-flags"
-	"github.com/vladikan/feedreader-telegrambot/server"
+	"github.com/vladikan/addrss-telegram/server"
 )
 
 type opts struct {

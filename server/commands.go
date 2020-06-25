@@ -3,8 +3,8 @@ package server
 import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/vladikan/feedreader-telegrambot/parser"
-	"github.com/vladikan/feedreader-telegrambot/templates"
+	"github.com/vladikan/addrss-telegram/parser"
+	"github.com/vladikan/addrss-telegram/templates"
 )
 
 // Command is used for propper method execution

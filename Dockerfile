@@ -7,7 +7,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
 
 # Runtime image definition
 FROM alpine:latest
-LABEL maintainer="https://github.com/VladikAN/feedreader-telegrambot"
+LABEL maintainer="https://github.com/VladikAN/addrss-telegram"
 WORKDIR /root/
 COPY --from=builder src/app .
 ENTRYPOINT ["./app"]
