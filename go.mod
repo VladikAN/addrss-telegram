@@ -10,4 +10,5 @@ require (
 	github.com/mmcdole/gofeed v1.0.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
+	github.com/umputun/go-flags v1.5.1
 )

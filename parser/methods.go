@@ -49,7 +49,9 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 			continue
 		}
 
-		text := html2text.HTML2Text(item.Content)
+		text := html2text.HTML2Text(item.Description)
+		text := strings.
+
 		topic := Topic{
 			Title: item.Title,
 			Text:  text,
