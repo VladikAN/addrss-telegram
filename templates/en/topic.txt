@@ -1,0 +1,3 @@
+<b>{{.Title}}</b>
+{{.Text}}
+<a href="{{.URI}}">read</a>

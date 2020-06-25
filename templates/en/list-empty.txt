@@ -1,0 +1,3 @@
+No active subscriptions.
+
+Use /add [uri] to add uri to list of subscriptions.

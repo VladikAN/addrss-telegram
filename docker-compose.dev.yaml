@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+    postgres:
+      ports:
+        - 5432:5432
+
+    addrss:
+      image: vladikan/addrss:latest
+      build: .
+      environment:
+        - AR_TOKEN
+        - AR_DATABASE=postgres://admin:admin@postgres/feed

@@ -1,0 +1,5 @@
+Please specify name to remove.
+
+/remove [name]
+
+Use /list to see subscription names.

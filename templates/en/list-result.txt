@@ -1,0 +1,5 @@
+Active subscriptions:
+{{range .}}
+* <b>{{.Name}}</b>
+Type /remove {{.Normalized}} - to unsubscribe from feed.
+{{end}}
