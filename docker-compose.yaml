@@ -17,7 +17,7 @@ services:
         - POSTGRES_DB=feed
 
     addrss:
-      image: vladikan/addrss:latest
+      image: vladikan/addrss-telegram:latest
       container_name: "addrss"
       hostname: "addrss"
       restart: always
