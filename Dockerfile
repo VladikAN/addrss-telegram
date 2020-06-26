@@ -10,4 +10,5 @@ FROM alpine:latest
 LABEL maintainer="https://github.com/VladikAN/addrss-telegram"
 WORKDIR /root/
 COPY --from=builder src/app .
+COPY --from=builder src/templates/en/* templates/en/
 ENTRYPOINT ["./app"]
