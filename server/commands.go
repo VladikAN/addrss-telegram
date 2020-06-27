@@ -19,6 +19,8 @@ func runCommand(msg *tgbotapi.Message) string {
 	var response string
 	var err error
 
+	log.Printf("DEBUG Received message: %s", msg.Text)
+
 	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
 		command := &Command{UserID: msg.Chat.ID} // Use chat ID as unique user
 		args := msg.CommandArguments()

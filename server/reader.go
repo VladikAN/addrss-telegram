@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/go-pkgz/lgr"
@@ -70,13 +71,13 @@ func (rd *Reader) readFeeds() error {
 		updates, err := parser.GetUpdates(feed.URI, *feed.Updated)
 		if err != nil {
 			db.SetFeedBroken(feed.ID)
-			return err
+			return fmt.Errorf("Feed '%s' unable to get updates: %s", feed.Normalized, err)
 		}
 
 		if len(updates) > 0 {
 			users, err := db.GetFeedUsers(feed.ID)
 			if err != nil {
-				return err
+				return fmt.Errorf("Feed '%s' unable to get subscriptions: %s", feed.Normalized, err)
 			}
 
 			log.Printf("INFO Reader found updates for '%s', sending %d items to %d subscriptions", feed.Normalized, len(updates), len(users))
@@ -85,7 +86,7 @@ func (rd *Reader) readFeeds() error {
 
 		err = db.SetFeedUpdated(feed.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("Feed '%s' unable to mark as updated: %s", feed.Normalized, err)
 		}
 	}
 
