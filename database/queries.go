@@ -103,13 +103,14 @@ func (db *Database) GetFeed(uri string) (*Feed, error) {
 func (db *Database) GetForUpdate(count int) ([]Feed, error) {
 	var feeds []Feed
 
+	// Get healthy or unhealthy for last day
 	query := `SELECT id, name, normalized, uri, updated, healthy
 	FROM feeds
-	WHERE healthy = $1
+	WHERE healthy = TRUE OR updated < current_date
 	ORDER BY updated
-	LIMIT $2`
+	LIMIT $1`
 
-	rows, err := db.Pool.Query(db.Context, query, true, count)
+	rows, err := db.Pool.Query(db.Context, query, count)
 	defer rows.Close()
 	if err != nil {
 		return feeds, err
@@ -154,7 +155,8 @@ func (db *Database) SetFeedUpdated(id int) error {
 // SetFeedBroken update feed by setting healthy to false
 func (db *Database) SetFeedBroken(id int) error {
 	query := `UPDATE feeds
-	SET healthy = TRUE
+	SET updated = $1,
+	healthy = FALSE
 	WHERE id = $2`
 
 	_, err := db.Pool.Exec(db.Context, query, time.Now(), id)

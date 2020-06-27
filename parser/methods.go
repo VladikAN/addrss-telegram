@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/k3a/html2text"
@@ -20,7 +21,7 @@ func GetTitle(uri string) (string, error) {
 
 	feed, err := fp.ParseURL(uri)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to read '%s': %s", uri, err)
 	}
 
 	return feed.Title, nil
@@ -31,7 +32,7 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(uri)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to read '%s': %s", uri, err)
 	}
 
 	if feed == nil {
