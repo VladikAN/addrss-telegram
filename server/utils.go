@@ -6,7 +6,7 @@ import (
 )
 
 func normalize(in string) string {
-	rg, _ := regexp.Compile("[^\\w \\.\\-]+")
+	rg, _ := regexp.Compile("[^\\p{L}\\d_ ]+")
 	nrm := rg.ReplaceAllString(in, "")
 
 	rg, _ = regexp.Compile("\\s+")
