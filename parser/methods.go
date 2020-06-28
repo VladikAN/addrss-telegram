@@ -43,7 +43,7 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 	var topics []Topic
 	for _, item := range feed.Items {
 		date := getDate(item)
-		if date == nil || date.Before(since) {
+		if date == nil || *date == since || date.Before(since) {
 			continue
 		}
 
