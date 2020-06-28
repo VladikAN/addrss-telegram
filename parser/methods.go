@@ -70,16 +70,18 @@ func GetLast(topics []Topic) *Topic {
 		return nil
 	}
 
-	max := &topics[0]
+	max := topics[0]
 	if len(topics) > 1 {
 		for _, topic := range topics {
-			if topic.Date.After(*max.Date) {
-				max = &topic
+			if topic.Date.Equal(*max.Date) || topic.Date.Before(*max.Date) {
+				continue
 			}
+
+			max = topic
 		}
 	}
 
-	return max
+	return &max
 }
 
 func getDate(item *gofeed.Item) *time.Time {
