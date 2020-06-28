@@ -6,9 +6,9 @@ Define your subscriptions and get updates through telegram bot messages.
 
 # How to start
 
-Follow [oficial guidelines](https://core.telegram.org/bots) to register new bot an abtain secret bot token.
+Follow [oficial guidelines](https://core.telegram.org/bots) to register new bot an obtain secret bot token.
 
-Update `docker-compose.yaml` by changing next keys:
+Update `docker-compose.yaml` by changing the next keys:
 * POSTGRES_USER - new secret database username.
 * POSTGRES_PASSWORD - new secret database password.
 * AR_TOKEN - secret bot token from telegram API.
