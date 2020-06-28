@@ -14,6 +14,7 @@ type Feed struct {
 	URI        string
 	Updated    *time.Time
 	Healthy    bool
+	LastPub    *time.Time
 }
 
 // UserFeed represents user subscription to the feed
@@ -52,7 +53,7 @@ func (db *Database) Unsubscribe(userID int64, feedID int) error {
 func (db *Database) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
@@ -68,7 +69,7 @@ func (db *Database) GetUserFeeds(userID int64) ([]Feed, error) {
 
 // GetUserURIFeed get user subscription by its uri (unique)
 func (db *Database) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
 	LIMIT 1`
@@ -79,7 +80,7 @@ func (db *Database) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 
 // GetUserNormalizedFeed get user subscription by its normalized name
 func (db *Database) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
 	LIMIT 1`
@@ -90,7 +91,7 @@ func (db *Database) GetUserNormalizedFeed(userID int64, normalized string) (*Fee
 
 // GetFeed get feed record by its uri (unique)
 func (db *Database) GetFeed(uri string) (*Feed, error) {
-	query := `SELECT id, name, normalized, uri, updated, healthy
+	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub
 	FROM feeds
 	WHERE uri = $1
 	LIMIT 1`
@@ -104,7 +105,7 @@ func (db *Database) GetForUpdate(count int) ([]Feed, error) {
 	var feeds []Feed
 
 	// Get healthy or unhealthy for last day
-	query := `SELECT id, name, normalized, uri, updated, healthy
+	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub
 	FROM feeds
 	WHERE healthy = TRUE OR updated < current_date
 	ORDER BY updated
@@ -152,6 +153,18 @@ func (db *Database) SetFeedUpdated(id int) error {
 	return err
 }
 
+// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date
+func (db *Database) SetFeedLastPub(id int, lastPub time.Time) error {
+	query := `UPDATE feeds
+	SET updated = $1,
+	healthy = TRUE,
+	last_pub = $2
+	WHERE id = $3`
+
+	_, err := db.Pool.Exec(db.Context, query, time.Now(), lastPub, id)
+	return err
+}
+
 // SetFeedBroken update feed by setting healthy to false
 func (db *Database) SetFeedBroken(id int) error {
 	query := `UPDATE feeds
@@ -170,8 +183,9 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var uri string
 	var updated *time.Time
 	var healthy bool
+	var lastPub *time.Time
 
-	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy); err == nil {
+	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &lastPub); err == nil {
 		return &Feed{
 			ID:         id,
 			Name:       name,
@@ -179,6 +193,7 @@ func toFeed(row pgx.Row) (*Feed, error) {
 			URI:        uri,
 			Updated:    updated,
 			Healthy:    healthy,
+			LastPub:    lastPub,
 		}, err
 	} else if err == pgx.ErrNoRows {
 		return nil, nil

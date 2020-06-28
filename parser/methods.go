@@ -13,6 +13,7 @@ type Topic struct {
 	Title string
 	Text  string
 	URI   string
+	Date  *time.Time
 }
 
 // GetTitle parses uri with RSS/ATOM parser and returns feed name
@@ -41,12 +42,8 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 
 	var topics []Topic
 	for _, item := range feed.Items {
-		tm := item.PublishedParsed
-		if tm == nil {
-			tm = item.UpdatedParsed // not all feeds has publish/update values, will ignore these feeds for now
-		}
-
-		if tm == nil || tm.Before(since) {
+		date := getDate(item)
+		if date == nil || date.Before(since) {
 			continue
 		}
 
@@ -59,9 +56,37 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 			Title: item.Title,
 			Text:  text,
 			URI:   item.Link,
+			Date:  date,
 		}
 		topics = append(topics, topic)
 	}
 
 	return topics, nil
+}
+
+// GetLast returns topic with latest publish date
+func GetLast(topics []Topic) *Topic {
+	if len(topics) == 0 {
+		return nil
+	}
+
+	max := &topics[0]
+	if len(topics) > 1 {
+		for _, topic := range topics {
+			if topic.Date.After(*max.Date) {
+				max = &topic
+			}
+		}
+	}
+
+	return max
+}
+
+func getDate(item *gofeed.Item) *time.Time {
+	tm := item.PublishedParsed
+	if tm == nil {
+		tm = item.UpdatedParsed // not all feeds has publish/update values, will ignore these feeds for now
+	}
+
+	return tm
 }

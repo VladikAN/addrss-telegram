@@ -68,7 +68,7 @@ func (rd *Reader) readFeeds() error {
 
 	// Read feeds from web
 	for _, feed := range feeds {
-		updates, err := parser.GetUpdates(feed.URI, *feed.Updated)
+		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
 		if err != nil {
 			db.SetFeedBroken(feed.ID)
 			return fmt.Errorf("Feed '%s' unable to get updates: %s", feed.Normalized, err)
@@ -82,6 +82,14 @@ func (rd *Reader) readFeeds() error {
 
 			log.Printf("INFO Reader found updates for '%s', sending %d items to %d subscriptions", feed.Normalized, len(updates), len(users))
 			rd.sendUpdates(updates, users)
+
+			last := parser.GetLast(updates)
+			err = db.SetFeedLastPub(feed.ID, *last.Date)
+			if err != nil {
+				return fmt.Errorf("Feed '%s' unable to mark as updated with last publish date: %s", feed.Normalized, err)
+			}
+
+			continue
 		}
 
 		err = db.SetFeedUpdated(feed.ID)
