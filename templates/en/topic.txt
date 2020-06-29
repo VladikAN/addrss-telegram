@@ -1,3 +1,2 @@
-<b>{{.Title}}</b>
-{{.Text}}
-<a href="{{.URI}}">read</a>
+<b>{{.Title}}</b> - {{.Feed}}
+{{.Text}} <a href="{{.URI}}">read</a>

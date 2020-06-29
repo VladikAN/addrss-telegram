@@ -10,6 +10,7 @@ import (
 
 // Topic is a lightweight representation of the parsed article
 type Topic struct {
+	Feed  string
 	Title string
 	Text  string
 	URI   string
@@ -53,6 +54,7 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 		}
 
 		topic := Topic{
+			Feed:  feed.Title,
 			Title: item.Title,
 			Text:  text,
 			URI:   item.Link,
