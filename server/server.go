@@ -27,7 +27,7 @@ type Reply struct {
 }
 
 var bot *tgbotapi.BotAPI
-var db *database.Database
+var db database.Database
 
 // Start will call for bot instance and process update messages
 func Start(options Options) {
@@ -54,8 +54,7 @@ func Start(options Options) {
 	}()
 
 	// Set db connection settings and use pool
-	db = &database.Database{Connection: options.Connection}
-	err = db.Open(ctx)
+	db, err = database.Open(ctx, options.Connection)
 	if err != nil {
 		log.Printf("PANIC Error while connecting to the database: %s", err)
 	}

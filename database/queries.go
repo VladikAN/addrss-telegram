@@ -25,7 +25,7 @@ type UserFeed struct {
 }
 
 // AddFeed inserts new feed to feeds postgres table
-func (db *Database) AddFeed(name string, normalized string, uri string) (*Feed, error) {
+func (db *Postgres) AddFeed(name string, normalized string, uri string) (*Feed, error) {
 	query := `INSERT INTO feeds (name, normalized, uri) VALUES ($1, $2, $3) ON CONFLICT (uri) DO NOTHING`
 	_, err := db.Pool.Exec(db.Context, query, name, normalized, uri)
 	if err != nil {
@@ -36,21 +36,21 @@ func (db *Database) AddFeed(name string, normalized string, uri string) (*Feed, 
 }
 
 // Subscribe bind relation between user and feed
-func (db *Database) Subscribe(userID int64, feedID int) error {
+func (db *Postgres) Subscribe(userID int64, feedID int) error {
 	query := `INSERT INTO userfeeds (user_id, feed_id) VALUES ($1, $2) ON CONFLICT (user_id, feed_id) DO NOTHING`
 	_, err := db.Pool.Exec(db.Context, query, userID, feedID)
 	return err
 }
 
 // Unsubscribe unbind relation between user and feed
-func (db *Database) Unsubscribe(userID int64, feedID int) error {
+func (db *Postgres) Unsubscribe(userID int64, feedID int) error {
 	query := `DELETE FROM userfeeds WHERE user_id = $1 AND feed_id = $2`
 	_, err := db.Pool.Exec(db.Context, query, userID, feedID)
 	return err
 }
 
 // GetUserFeeds gets user subscriptions
-func (db *Database) GetUserFeeds(userID int64) ([]Feed, error) {
+func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
 	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
@@ -68,7 +68,7 @@ func (db *Database) GetUserFeeds(userID int64) ([]Feed, error) {
 }
 
 // GetUserURIFeed get user subscription by its uri (unique)
-func (db *Database) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
+func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
@@ -79,7 +79,7 @@ func (db *Database) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 }
 
 // GetUserNormalizedFeed get user subscription by its normalized name
-func (db *Database) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
+func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
 	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
@@ -90,7 +90,7 @@ func (db *Database) GetUserNormalizedFeed(userID int64, normalized string) (*Fee
 }
 
 // GetFeed get feed record by its uri (unique)
-func (db *Database) GetFeed(uri string) (*Feed, error) {
+func (db *Postgres) GetFeed(uri string) (*Feed, error) {
 	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub
 	FROM feeds
 	WHERE uri = $1
@@ -101,7 +101,7 @@ func (db *Database) GetFeed(uri string) (*Feed, error) {
 }
 
 // GetForUpdate read specified count for update
-func (db *Database) GetForUpdate(count int) ([]Feed, error) {
+func (db *Postgres) GetForUpdate(count int) ([]Feed, error) {
 	var feeds []Feed
 
 	// Get healthy or unhealthy for last day
@@ -121,7 +121,7 @@ func (db *Database) GetForUpdate(count int) ([]Feed, error) {
 }
 
 // GetFeedUsers returns active feed subscriptions
-func (db *Database) GetFeedUsers(feedID int) ([]UserFeed, error) {
+func (db *Postgres) GetFeedUsers(feedID int) ([]UserFeed, error) {
 	query := `SELECT user_id, added FROM userfeeds WHERE feed_id = $1`
 	rows, err := db.Pool.Query(db.Context, query, &feedID)
 	if err != nil {
@@ -143,7 +143,7 @@ func (db *Database) GetFeedUsers(feedID int) ([]UserFeed, error) {
 }
 
 // SetFeedUpdated update feed by new timespan and set healthy to true
-func (db *Database) SetFeedUpdated(id int) error {
+func (db *Postgres) SetFeedUpdated(id int) error {
 	query := `UPDATE feeds
 	SET updated = $1,
 	healthy = TRUE
@@ -154,7 +154,7 @@ func (db *Database) SetFeedUpdated(id int) error {
 }
 
 // SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date
-func (db *Database) SetFeedLastPub(id int, lastPub time.Time) error {
+func (db *Postgres) SetFeedLastPub(id int, lastPub time.Time) error {
 	query := `UPDATE feeds
 	SET updated = $1,
 	healthy = TRUE,
@@ -166,7 +166,7 @@ func (db *Database) SetFeedLastPub(id int, lastPub time.Time) error {
 }
 
 // SetFeedBroken update feed by setting healthy to false
-func (db *Database) SetFeedBroken(id int) error {
+func (db *Postgres) SetFeedBroken(id int) error {
 	query := `UPDATE feeds
 	SET updated = $1,
 	healthy = FALSE
