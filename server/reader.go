@@ -15,7 +15,7 @@ import (
 type Reader struct {
 	Interval int
 	Feeds    int
-	DB       *database.Database
+	DB       database.Database
 	Outbox   chan Reply
 
 	stop chan interface{}
