@@ -9,6 +9,7 @@ import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
+	"github.com/vladikan/addrss-telegram/templates"
 )
 
 // Options holds all necessary settings for the app
@@ -52,6 +53,8 @@ func Start(options Options) {
 		log.Print("WARN System interrupt signal")
 		cancel()
 	}()
+
+	templates.SetTemplateOutput()
 
 	// Set db connection settings and use pool
 	db, err = database.Open(ctx, options.Connection)
