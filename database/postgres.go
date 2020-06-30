@@ -2,32 +2,71 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-// Database is concrete implementation for the PostgreSql
-type Database struct {
+// Postgres is concrete implementation for the PostgreSql
+type Postgres struct {
 	Connection string
 	Pool       *pgxpool.Pool
 	Context    context.Context
 }
 
-// Open will start database connection. Should be called first
-func (db *Database) Open(ctx context.Context) error {
-	pool, err := pgxpool.Connect(ctx, db.Connection)
-	if err != nil {
-		return err
-	}
+// Database is an db operations proxy
+type Database interface {
+	// Close will termintae current connection, Should be called after all operations
+	Close()
 
-	db.Pool = pool
-	db.Context = ctx
+	// AddFeed inserts new feed to feeds postgres table
+	AddFeed(name string, normalized string, uri string) (*Feed, error)
 
-	return nil
+	// Subscribe bind relation between user and feed
+	Subscribe(userID int64, feedID int) error
+
+	// Unsubscribe unbind relation between user and feed
+	Unsubscribe(userID int64, feedID int) error
+
+	// GetUserFeeds gets user subscriptions
+	GetUserFeeds(userID int64) ([]Feed, error)
+
+	// GetUserURIFeed get user subscription by its uri (unique)
+	GetUserURIFeed(userID int64, uri string) (*Feed, error)
+
+	// GetUserNormalizedFeed get user subscription by its normalized name
+	GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error)
+
+	// GetFeed get feed record by its uri (unique)
+	GetFeed(uri string) (*Feed, error)
+
+	// GetForUpdate read specified count for update
+	GetForUpdate(count int) ([]Feed, error)
+
+	// GetFeedUsers returns active feed subscriptions
+	GetFeedUsers(feedID int) ([]UserFeed, error)
+
+	// SetFeedUpdated update feed by new timespan and set healthy to true
+	SetFeedUpdated(id int) error
+
+	// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date
+	SetFeedLastPub(id int, lastPub time.Time) error
+
+	// SetFeedBroken update feed by setting healthy to false
+	SetFeedBroken(id int) error
 }
 
-// Close will termintae current connection, Should be called after all operations
-func (db *Database) Close() {
+// Open will start database connection. Should be called first
+func Open(ctx context.Context, connection string) (*Postgres, error) {
+	pool, err := pgxpool.Connect(ctx, connection)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Postgres{Pool: pool, Context: ctx}, nil
+}
+
+func (db *Postgres) Close() {
 	db.Pool.Close()
 	db.Context = nil
 }

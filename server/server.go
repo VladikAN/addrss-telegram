@@ -9,6 +9,7 @@ import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
+	"github.com/vladikan/addrss-telegram/templates"
 )
 
 // Options holds all necessary settings for the app
@@ -27,7 +28,7 @@ type Reply struct {
 }
 
 var bot *tgbotapi.BotAPI
-var db *database.Database
+var db database.Database
 
 // Start will call for bot instance and process update messages
 func Start(options Options) {
@@ -53,9 +54,10 @@ func Start(options Options) {
 		cancel()
 	}()
 
+	templates.SetTemplateOutput()
+
 	// Set db connection settings and use pool
-	db = &database.Database{Connection: options.Connection}
-	err = db.Open(ctx)
+	db, err = database.Open(ctx, options.Connection)
 	if err != nil {
 		log.Printf("PANIC Error while connecting to the database: %s", err)
 	}
