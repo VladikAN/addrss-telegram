@@ -1,0 +1,2 @@
+<b>{{.Title}}</b> - {{.Feed}}
+{{.Text}} <a href="{{.URI}}">читать</a>
