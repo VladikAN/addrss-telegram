@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	"github.com/k3a/html2text"
 	"github.com/mmcdole/gofeed"
@@ -54,14 +55,10 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 		}
 
 		text := html2text.HTML2Text(item.Description)
-		if len(text) > 512 {
-			text = text[:512] + "..."
-		}
-
 		topic := Topic{
 			Feed:  feed.Title,
 			Title: item.Title,
-			Text:  text,
+			Text:  cropText(text),
 			URI:   item.Link,
 			Date:  date,
 		}
@@ -98,4 +95,21 @@ func getDate(item *gofeed.Item) *time.Time {
 	}
 
 	return tm
+}
+
+func cropText(txt string) string {
+	// Scan string for UTF-8 symbols larger then 1 width.
+	// Need to crop text correctly to avoid unreadable symbols.
+
+	limit := 512
+	for i, w := 0, 0; i < len(txt); i += w {
+		_, size := utf8.DecodeRuneInString(txt[i:])
+		w = size
+
+		if i > limit {
+			return txt[:i] + "..."
+		}
+	}
+
+	return txt
 }
