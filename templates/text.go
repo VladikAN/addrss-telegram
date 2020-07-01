@@ -3,15 +3,18 @@ package templates
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 )
 
-var output func(name string, data interface{}) (string, error)
+var langs []string = []string{"en", "ru"}
+var output func(lang string, name string, data interface{}) (string, error)
 
 // SetTemplateOutput set standard template generation
 func SetTemplateOutput() {
-	output = func(name string, data interface{}) (string, error) {
-		tmpl, err := template.ParseFiles(fmt.Sprintf("templates/en/%s.txt", name))
+	output = func(lang string, name string, data interface{}) (string, error) {
+		loc := parseLang(lang)
+		tmpl, err := template.ParseFiles(fmt.Sprintf("templates/%s/%s.txt", loc, name))
 		if err != nil {
 			return "", err
 		}
@@ -27,16 +30,27 @@ func SetTemplateOutput() {
 }
 
 // SetCustomOutput set custom output generation
-func SetCustomOutput(out func(name string, data interface{}) (string, error)) {
+func SetCustomOutput(out func(lang string, name string, data interface{}) (string, error)) {
 	output = out
 }
 
 // ToText prints template content
-func ToText(name string) (string, error) {
-	return output(name, nil)
+func ToText(lang string, name string) (string, error) {
+	return output(lang, name, nil)
 }
 
 // ToTextW prints template content with the data
-func ToTextW(name string, data interface{}) (string, error) {
-	return output(name, data)
+func ToTextW(lang string, name string, data interface{}) (string, error) {
+	return output(lang, name, data)
+}
+
+func parseLang(lang string) string {
+	loc := strings.ToLower(lang)
+	for _, name := range langs {
+		if name == loc {
+			return loc
+		}
+	}
+
+	return "en"
 }

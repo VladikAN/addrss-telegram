@@ -1,4 +1,4 @@
-Feed '{{.}}' successfully added to subscriptions. Please specify URI to add.
+Please specify URI to add.
 
 /add https://example.com/feed.rss
 

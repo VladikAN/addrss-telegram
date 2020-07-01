@@ -104,7 +104,7 @@ func (rd *Reader) readFeeds() error {
 
 func (rd *Reader) sendUpdates(updates []parser.Topic, users []database.UserFeed) {
 	for _, upd := range updates {
-		txt, _ := templates.ToTextW("topic", upd)
+		txt, _ := templates.ToTextW("en", "topic", upd)
 
 		for _, usr := range users {
 			rd.Outbox <- Reply{ChatID: usr.UserID, Text: txt}

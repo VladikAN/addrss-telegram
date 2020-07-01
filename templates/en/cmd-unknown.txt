@@ -1,1 +1,1 @@
-Sorry, command is unknown
+Sorry, command is unknown.
