@@ -189,7 +189,7 @@ func assertTemplate(t *testing.T, name string, exp string, err error) {
 }
 
 func setup() {
-	custom := func(name string, data interface{}) (string, error) {
+	custom := func(lang string, name string, data interface{}) (string, error) {
 		return name, nil
 	}
 

@@ -11,6 +11,7 @@ import (
 type Command struct {
 	UserID int64
 	Args   []string
+	Lang   string
 }
 
 var emptyText string
@@ -19,10 +20,11 @@ func runCommand(msg *tgbotapi.Message) string {
 	var response string
 	var err error
 
+	lang := msg.From.LanguageCode
 	log.Printf("DEBUG Received message: %s", msg.Text)
 
 	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
-		command := &Command{UserID: msg.Chat.ID} // Use chat ID as unique user
+		command := &Command{UserID: msg.Chat.ID, Lang: lang} // Use chat ID as unique user
 		args := msg.CommandArguments()
 
 		switch cmd {
@@ -41,31 +43,31 @@ func runCommand(msg *tgbotapi.Message) string {
 
 	if err != nil {
 		log.Printf("ERROR user %d command '%s' completed with error: '%s'", msg.From.ID, msg.Text, err)
-		response, _ = templates.ToText("cmd-error")
+		response, _ = templates.ToText(lang, "cmd-error")
 	}
 
 	if len(response) == 0 {
 		log.Printf("WARN command '%s' is unknown", msg.Text)
-		response, _ = templates.ToText("cmd-unknown")
+		response, _ = templates.ToText(lang, "cmd-unknown")
 	}
 
 	return response
 }
 
 func (cmd *Command) start() (string, error) {
-	return templates.ToText("start-success")
+	return templates.ToText(cmd.Lang, "start-success")
 }
 
 func (cmd *Command) add() (string, error) {
 	if len(cmd.Args) == 0 {
-		return templates.ToText("add-validation")
+		return templates.ToText(cmd.Lang, "add-validation")
 	}
 
 	uri := cmd.Args[0] // will use only one for now
 	if userFeed, err := db.GetUserURIFeed(cmd.UserID, uri); err != nil {
 		return emptyText, err
 	} else if userFeed != nil {
-		return templates.ToTextW("add-exists", userFeed)
+		return templates.ToTextW(cmd.Lang, "add-exists", userFeed)
 	}
 
 	feed, err := db.GetFeed(uri)
@@ -90,12 +92,12 @@ func (cmd *Command) add() (string, error) {
 		return emptyText, err
 	}
 
-	return templates.ToTextW("add-success", feed)
+	return templates.ToTextW(cmd.Lang, "add-success", feed)
 }
 
 func (cmd *Command) remove() (string, error) {
 	if len(cmd.Args) == 0 {
-		return templates.ToText("remove-validation")
+		return templates.ToText(cmd.Lang, "remove-validation")
 	}
 
 	name := cmd.Args[0] // will use only one for now
@@ -106,7 +108,7 @@ func (cmd *Command) remove() (string, error) {
 	}
 
 	if feed == nil {
-		return templates.ToText("remove-no-rows")
+		return templates.ToText(cmd.Lang, "remove-no-rows")
 	}
 
 	err = db.Unsubscribe(cmd.UserID, feed.ID)
@@ -114,7 +116,7 @@ func (cmd *Command) remove() (string, error) {
 		return emptyText, err
 	}
 
-	return templates.ToTextW("remove-success", feed)
+	return templates.ToTextW(cmd.Lang, "remove-success", feed)
 }
 
 func (cmd *Command) list() (string, error) {
@@ -125,8 +127,8 @@ func (cmd *Command) list() (string, error) {
 	}
 
 	if len(feeds) == 0 {
-		return templates.ToText("list-empty")
+		return templates.ToText(cmd.Lang, "list-empty")
 	}
 
-	return templates.ToTextW("list-result", feeds)
+	return templates.ToTextW(cmd.Lang, "list-result", feeds)
 }
