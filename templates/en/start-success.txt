@@ -1,9 +1,7 @@
 AddRss is an opensource RSS and ATOM feeds reader.
-Define your subscriptions and get updates through telegram bot messages. 
+Define your subscriptions and get updates through telegram bot messages.
 
-Use /list to see a list of the active subscriptions.
-Call /add [uri] to add a new subscription to the list. URI must start with the http:// or https://.
-And /remove [name] to remove the subscription from the list.
+Use /help to see list of the available commands.
 
 This message can be repeated by /start command.
 Source code available at https://github.com/VladikAN/addrss-telegram.
