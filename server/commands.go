@@ -17,14 +17,18 @@ type Command struct {
 var emptyText string
 
 func runCommand(msg *tgbotapi.Message) string {
+	log.Printf("DEBUG Received message: %s", msg.Text)
+
 	var response string
 	var err error
 
-	lang := msg.From.LanguageCode
-	log.Printf("DEBUG Received message: %s", msg.Text)
+	command := &Command{UserID: msg.Chat.ID, Lang: msg.From.LanguageCode}
+	if msg.Document != nil {
+		command.Args = []string{msg.Document.FileID}
+		response, err = command.importOpml()
+	}
 
 	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
-		command := &Command{UserID: msg.Chat.ID, Lang: lang} // Use chat ID as unique user
 		args := msg.CommandArguments()
 
 		switch cmd {
@@ -35,6 +39,8 @@ func runCommand(msg *tgbotapi.Message) string {
 		case "add":
 			command.Args = splitURI(args)
 			response, err = command.add()
+		case "import":
+			response, err = command.importOpml() // simply call for validation message
 		case "remove":
 			command.Args = splitNonEmpty(args)
 			response, err = command.remove()
@@ -45,12 +51,12 @@ func runCommand(msg *tgbotapi.Message) string {
 
 	if err != nil {
 		log.Printf("ERROR user %d command '%s' completed with error: '%s'", msg.From.ID, msg.Text, err)
-		response, _ = templates.ToText(lang, "cmd-error")
+		response, _ = templates.ToText(command.Lang, "cmd-error")
 	}
 
 	if len(response) == 0 {
 		log.Printf("WARN command '%s' is unknown", msg.Text)
-		response, _ = templates.ToText(lang, "cmd-unknown")
+		response, _ = templates.ToText(command.Lang, "cmd-unknown")
 	}
 
 	return response
@@ -99,6 +105,28 @@ func (cmd *Command) add() (string, error) {
 	}
 
 	return templates.ToTextW(cmd.Lang, "add-success", feed)
+}
+
+func (cmd *Command) importOpml() (string, error) {
+	if len(cmd.Args) == 0 {
+		return templates.ToText(cmd.Lang, "import-validation")
+	}
+
+	fl, err := bot.GetFileDirectURL(cmd.Args[0])
+	if err != nil {
+		return emptyText, err
+	}
+
+	items, err := parser.ReadOmpl(fl)
+	if err != nil {
+		return emptyText, err
+	}
+
+	if len(items) == 0 {
+
+	}
+
+	return emptyText, nil
 }
 
 func (cmd *Command) remove() (string, error) {
