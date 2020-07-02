@@ -23,6 +23,12 @@ func TestStart(t *testing.T) {
 	assertTemplate(t, r, exp, err)
 }
 
+func TestHelp(t *testing.T) {
+	exp := "help-success"
+	r, err := (&Command{}).help()
+	assertTemplate(t, r, exp, err)
+}
+
 func TestAdd_NoArgs(t *testing.T) {
 	exp := "add-validation"
 	r, err := (&Command{}).add()
