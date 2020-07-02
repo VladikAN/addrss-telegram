@@ -30,6 +30,8 @@ func runCommand(msg *tgbotapi.Message) string {
 		switch cmd {
 		case "start":
 			response, err = command.start()
+		case "help":
+			response, err = command.help()
 		case "add":
 			command.Args = splitURI(args)
 			response, err = command.add()
@@ -56,6 +58,10 @@ func runCommand(msg *tgbotapi.Message) string {
 
 func (cmd *Command) start() (string, error) {
 	return templates.ToText(cmd.Lang, "start-success")
+}
+
+func (cmd *Command) help() (string, error) {
+	return templates.ToText(cmd.Lang, "help-success")
 }
 
 func (cmd *Command) add() (string, error) {
