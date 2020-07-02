@@ -3,6 +3,7 @@ package server
 import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/parser"
 	"github.com/vladikan/addrss-telegram/templates"
 )
@@ -82,24 +83,7 @@ func (cmd *Command) add() (string, error) {
 		return templates.ToTextW(cmd.Lang, "add-exists", userFeed)
 	}
 
-	feed, err := db.GetFeed(uri)
-	if err != nil {
-		return emptyText, err
-	}
-
-	if feed == nil {
-		title, err := parser.GetTitle(uri)
-		if err != nil {
-			return emptyText, err
-		}
-
-		feed, err = db.AddFeed(title, normalize(title), uri)
-		if err != nil {
-			return emptyText, err
-		}
-	}
-
-	err = db.Subscribe(cmd.UserID, feed.ID)
+	feed, err := addFeed(cmd.UserID, uri, "")
 	if err != nil {
 		return emptyText, err
 	}
@@ -122,11 +106,23 @@ func (cmd *Command) importOpml() (string, error) {
 		return emptyText, err
 	}
 
-	if len(items) == 0 {
+	type results struct {
+		Added  int
+		Errors int
+	}
+	var result results
 
+	for _, item := range items {
+		_, err = addFeed(cmd.UserID, item.URL, item.Title)
+		if err != nil {
+			log.Printf("ERROR Feed '%s' was not imported with error: '%s'", item.URL, err)
+			result.Errors++
+		} else {
+			result.Added++
+		}
 	}
 
-	return emptyText, nil
+	return templates.ToTextW(cmd.Lang, "import-success", result)
 }
 
 func (cmd *Command) remove() (string, error) {
@@ -165,4 +161,32 @@ func (cmd *Command) list() (string, error) {
 	}
 
 	return templates.ToTextW(cmd.Lang, "list-result", feeds)
+}
+
+func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
+	feed, err := db.GetFeed(uri)
+	if err != nil {
+		return nil, err
+	}
+
+	if feed == nil {
+		if len(title) == 0 {
+			title, err = parser.GetTitle(uri)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		feed, err = db.AddFeed(title, normalize(title), uri)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = db.Subscribe(userID, feed.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return feed, nil
 }

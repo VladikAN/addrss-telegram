@@ -1,0 +1,5 @@
+File uploaded and added to subscriptions.
+{{.Added}} - Feeds added.
+{{.Errors}} - Feeds completed with error.
+
+Use /list to see list of final subscriptions.
