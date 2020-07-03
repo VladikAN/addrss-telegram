@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/xml"
+	"io"
 	"net/http"
 )
 
@@ -36,8 +37,12 @@ func ReadOmpl(url string) ([]OpmlItem, error) {
 	}
 	defer resp.Body.Close()
 
+	return decode(resp.Body)
+}
+
+func decode(io io.Reader) ([]OpmlItem, error) {
 	var fl opml
-	err = xml.NewDecoder(resp.Body).Decode(&fl)
+	err := xml.NewDecoder(io).Decode(&fl)
 	if err != nil {
 		return []OpmlItem{}, err
 	}
