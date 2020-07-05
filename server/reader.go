@@ -57,7 +57,7 @@ func (rd *Reader) Stop() {
 }
 
 func (rd *Reader) readFeeds() error {
-	log.Printf("INFO Reader job started. %d feeds to be readed", rd.Feeds)
+	log.Printf("DEBUG Reader job started. %d feeds to be readed", rd.Feeds)
 	duration := time.Duration(rd.Interval) * time.Second
 
 	// Read feeds from db
@@ -98,7 +98,7 @@ func (rd *Reader) readFeeds() error {
 		}
 	}
 
-	log.Printf("INFO Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
+	log.Printf("DEBUG Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
 	return nil
 }
 
