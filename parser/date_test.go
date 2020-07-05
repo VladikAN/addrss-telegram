@@ -8,9 +8,9 @@ import (
 )
 
 func TestParseDate_RU(t *testing.T) {
-	ex, _ := time.Parse("2006-01-02T15:0400 +0300", "2020-07-04T15:09:00 +0300")
+	ex, _ := time.Parse(time.RFC1123Z, "Sat, 04 Jul 2020 15:09:00 +0300")
 	tm := "Сб, 4 июл 2020 15:09:00 +0300"
-	rt := parseDate(&gofeed.Item{Published: tm}, "RU")
+	rt := parseDate(&gofeed.Item{Published: tm}, "ru-RU")
 
 	if rt == nil {
 		t.Errorf("Unable to parse input string '%s'", tm)

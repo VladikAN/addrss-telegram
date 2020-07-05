@@ -32,6 +32,15 @@ var ruMonths = map[string]string{
 	"дек": "Dec",
 }
 
+var formats = []string{
+	time.RFC1123,
+	"Mon, 2 Jan 2006 15:04:05 MST",
+	time.RFC1123Z,
+	"Mon, 2 Jan 2006 15:04:05 -0700",
+	time.RFC822,
+	time.RFC822Z,
+}
+
 func parseDate(item *gofeed.Item, lang string) (tm *time.Time) {
 	tm = item.PublishedParsed
 	if tm == nil {
@@ -53,7 +62,7 @@ func parseDate(item *gofeed.Item, lang string) (tm *time.Time) {
 
 	raw = strings.ToLower(raw)
 	switch strings.ToLower(lang) {
-	case "ru":
+	case "ru-ru":
 		{
 			raw = replaceLang(raw, ruDays)
 			raw = replaceLang(raw, ruMonths)
@@ -76,18 +85,10 @@ func replaceLang(str string, rpl map[string]string) string {
 }
 
 func parseLayout(str string) *time.Time {
-	if ts, err := time.Parse(time.RFC822Z, str); err == nil {
-		return &ts
-	}
-	if ts, err := time.Parse(time.RFC822, str); err == nil {
-		return &ts
-	}
-
-	if ts, err := time.Parse(time.RFC1123Z, str); err == nil {
-		return &ts
-	}
-	if ts, err := time.Parse(time.RFC1123, str); err == nil {
-		return &ts
+	for _, format := range formats {
+		if ts, err := time.Parse(format, str); err == nil {
+			return &ts
+		}
 	}
 
 	return nil
