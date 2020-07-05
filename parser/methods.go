@@ -44,7 +44,7 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 
 	var topics []Topic
 	for _, item := range feed.Items {
-		date := getDate(item)
+		date := parseDate(item, feed.Language)
 		if date == nil {
 			continue
 		}
@@ -86,15 +86,6 @@ func GetLast(topics []Topic) *Topic {
 	}
 
 	return &max
-}
-
-func getDate(item *gofeed.Item) *time.Time {
-	tm := item.PublishedParsed
-	if tm == nil {
-		tm = item.UpdatedParsed // not all feeds has publish/update values, will ignore these feeds for now
-	}
-
-	return tm
 }
 
 func cropText(txt string) string {
