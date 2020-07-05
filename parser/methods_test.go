@@ -3,27 +3,7 @@ package parser
 import (
 	"testing"
 	"time"
-
-	"github.com/mmcdole/gofeed"
 )
-
-func TestGetDatePublished(t *testing.T) {
-	now := time.Now()
-	item := &gofeed.Item{PublishedParsed: &now}
-	result := getDate(item)
-	if *result != now {
-		t.Errorf("Expected '%s', but was '%s'", now, result)
-	}
-}
-
-func TestGetDateUpdated(t *testing.T) {
-	now := time.Now()
-	item := &gofeed.Item{UpdatedParsed: &now}
-	result := getDate(item)
-	if *result != now {
-		t.Errorf("Expected '%s', but was '%s'", now, result)
-	}
-}
 
 func TestGetLastWithEmpty(t *testing.T) {
 	var topics []Topic
