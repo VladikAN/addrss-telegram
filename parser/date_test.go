@@ -16,7 +16,7 @@ func TestParseDate_RU(t *testing.T) {
 		t.Errorf("Unable to parse input string '%s'", tm)
 	}
 
-	if *rt != ex {
+	if !rt.Equal(ex) {
 		t.Errorf("Expected '%s', but was '%s'", ex, *rt)
 	}
 }
