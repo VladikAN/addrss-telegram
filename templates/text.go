@@ -16,13 +16,13 @@ func SetTemplateOutput() {
 		loc := parseLang(lang)
 		tmpl, err := template.ParseFiles(fmt.Sprintf("templates/%s/%s.txt", loc, name))
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("Error on '%s/%s' template loading, %s", loc, name, err)
 		}
 
 		var tpl bytes.Buffer
 		err = tmpl.Execute(&tpl, data)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("Error on '%s/%s' template executing, %s", loc, name, err)
 		}
 
 		return tpl.String(), nil
