@@ -11,6 +11,8 @@ func normalize(in string) string {
 
 	rg, _ = regexp.Compile("\\s+")
 	nrm = rg.ReplaceAllString(nrm, " ")
+
+	nrm = strings.TrimSpace(nrm)
 	nrm = strings.ReplaceAll(nrm, " ", "-")
 	nrm = strings.ToLower(nrm)
 
