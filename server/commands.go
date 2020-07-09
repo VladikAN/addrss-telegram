@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
@@ -103,14 +105,13 @@ func (cmd *Command) importOpml() (string, error) {
 
 	items, err := parser.ReadOmpl(fl)
 	if err != nil {
-		return emptyText, err
+		return emptyText, fmt.Errorf("Error while parsing OMPL file, %s", err)
 	}
 
-	type results struct {
+	result := struct {
 		Added  int
 		Errors int
-	}
-	var result results
+	}{}
 
 	for _, item := range items {
 		_, err = addFeed(cmd.UserID, item.URL, item.Title)

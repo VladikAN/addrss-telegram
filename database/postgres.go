@@ -12,6 +12,8 @@ type Postgres struct {
 	Connection string
 	Pool       *pgxpool.Pool
 	Context    context.Context
+
+	cancel context.CancelFunc
 }
 
 // Database is an db operations proxy
@@ -58,15 +60,19 @@ type Database interface {
 
 // Open will start database connection. Should be called first
 func Open(ctx context.Context, connection string) (*Postgres, error) {
-	pool, err := pgxpool.Connect(ctx, connection)
+	pctx, cancel := context.WithCancel(ctx)
+	pool, err := pgxpool.Connect(pctx, connection)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
-	return &Postgres{Pool: pool, Context: ctx}, nil
+	return &Postgres{Pool: pool, Context: pctx, cancel: cancel}, nil
 }
 
+// Close will drop psql connections
 func (db *Postgres) Close() {
+	db.cancel()
 	db.Pool.Close()
 	db.Context = nil
 }
