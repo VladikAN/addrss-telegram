@@ -1,6 +1,6 @@
 AddRss is an opensource RSS and ATOM feeds reader.
 
-Define your subscriptions and get updates through telegram bot messages.
+Get start with [AddRss](https://telegram.me/addrssbot) telegram bot, define your subscriptions and get updates through telegram bot messages.
 
 ![version - 1](/pics/preview.png)
 

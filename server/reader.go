@@ -66,7 +66,12 @@ func (rd *Reader) readFeeds() error {
 		return err
 	}
 
-	// Read feeds from web
+	stats := struct {
+		updated  int
+		notified int
+	}{}
+
+	// Read feeds from servers
 	for _, feed := range feeds {
 		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
 		if err != nil {
@@ -80,7 +85,8 @@ func (rd *Reader) readFeeds() error {
 				return fmt.Errorf("Feed '%s' unable to get subscriptions: %s", feed.Normalized, err)
 			}
 
-			log.Printf("INFO Reader found updates for '%s', sending %d items to %d subscriptions", feed.Normalized, len(updates), len(users))
+			stats.updated += len(updates)
+			stats.notified += len(users)
 			rd.sendUpdates(updates, users)
 
 			last := parser.GetLast(updates)
@@ -96,6 +102,10 @@ func (rd *Reader) readFeeds() error {
 		if err != nil {
 			return fmt.Errorf("Feed '%s' unable to mark as updated: %s", feed.Normalized, err)
 		}
+	}
+
+	if stats.updated > 0 {
+		log.Printf("INFO Reader found %d new post(s) and notified %d subscription(s)", stats.updated, stats.notified)
 	}
 
 	log.Printf("DEBUG Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
