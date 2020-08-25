@@ -63,16 +63,16 @@ func Start(options Options) {
 	}
 
 	// Init messages channel
-	outbox := make(chan Reply)
-	go handleOutbox(outbox)
+	replyQueue := make(chan Reply)
+	go handleReply(replyQueue)
 
 	// Start reader
-	reader := &Reader{Interval: options.ReaderInterval, Feeds: options.ReaderFeeds, DB: db, Outbox: outbox}
+	reader := &Reader{Interval: options.ReaderInterval, Feeds: options.ReaderFeeds, DB: db, Outbox: replyQueue}
 	reader.Start()
 
 	// Read commands from users
 	updates, err := bot.GetUpdatesChan(cfg)
-	go handleRequests(updates, outbox)
+	go handleRequests(updates, replyQueue)
 
 	// Stop bot operations and close all connections
 	<-ctx.Done()
@@ -80,12 +80,12 @@ func Start(options Options) {
 	reader.Stop()
 	bot.StopReceivingUpdates()
 	db.Close()
-	close(outbox)
+	close(replyQueue)
 
 	log.Print("INFO Stopped updates processing")
 }
 
-func handleRequests(updates tgbotapi.UpdatesChannel, outbox chan Reply) {
+func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply) {
 	log.Print("INFO Start updates processing")
 	for update := range updates {
 		if update.Message == nil {
@@ -94,12 +94,14 @@ func handleRequests(updates tgbotapi.UpdatesChannel, outbox chan Reply) {
 
 		msg := update.Message
 		txt := runCommand(msg)
-		outbox <- Reply{ChatID: msg.Chat.ID, Text: txt}
+		replyQueue <- Reply{ChatID: msg.Chat.ID, Text: txt}
 	}
+
+	log.Print("DEBUG telegram updates channel was closed")
 }
 
-func handleOutbox(outbox chan Reply) {
-	for msg := range outbox {
+func handleReply(queue chan Reply) {
+	for msg := range queue {
 		rsp := tgbotapi.NewMessage(msg.ChatID, msg.Text)
 		rsp.ParseMode = "HTML"
 
@@ -107,4 +109,6 @@ func handleOutbox(outbox chan Reply) {
 			log.Printf("ERROR Problem while replying on %d chat: %s", msg.ChatID, err)
 		}
 	}
+
+	log.Print("DEBUG reply queue channel was closed")
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	log "github.com/go-pkgz/lgr"
 	"github.com/umputun/go-flags"
 	"github.com/vladikan/addrss-telegram/server"
@@ -15,17 +17,24 @@ type opts struct {
 }
 
 func main() {
-	log.Setup(log.Msec, log.LevelBraces)
-
+	// Read params
 	op := opts{}
 	if _, err := flags.Parse(&op); err != nil {
-		log.Printf("PANIC error while reading input options: %s", err)
+		panic(fmt.Sprintf("PANIC error while reading input options: %s", err))
 	}
 
 	if len(op.Token) == 0 {
-		log.Print("PANIC bot token is not defined")
+		panic("PANIC bot token is not defined")
 	}
 
+	// Setup logger
+	logOpt := []log.Option{log.Msec, log.LevelBraces}
+	if op.Debug {
+		logOpt = append(logOpt, log.Debug)
+	}
+	log.Setup(logOpt...)
+
+	// Start bot
 	opt := server.Options{
 		Token:          op.Token,
 		Connection:     op.Conneciton,
