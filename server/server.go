@@ -46,13 +46,7 @@ func Start(options Options) {
 
 	// Hook for system terminate signal
 	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		stop := make(chan os.Signal, 1)
-		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-		<-stop
-		log.Print("WARN System interrupt signal")
-		cancel()
-	}()
+	go handleTerminate(cancel)
 
 	templates.SetTemplateOutput()
 
@@ -61,43 +55,52 @@ func Start(options Options) {
 	if err != nil {
 		log.Printf("PANIC Error while connecting to the database: %s", err)
 	}
+	defer db.Close()
 
 	// Init messages channel
 	replyQueue := make(chan Reply)
 	go handleReply(replyQueue)
+	defer close(replyQueue)
 
 	// Start reader
 	reader := &Reader{Interval: options.ReaderInterval, Feeds: options.ReaderFeeds, DB: db, Outbox: replyQueue}
 	reader.Start()
+	defer reader.Stop()
 
 	// Read commands from users
 	updates, err := bot.GetUpdatesChan(cfg)
 	go handleRequests(updates, replyQueue)
+	defer bot.StopReceivingUpdates()
 
 	// Stop bot operations and close all connections
 	<-ctx.Done()
 
-	reader.Stop()
-	bot.StopReceivingUpdates()
-	db.Close()
-	close(replyQueue)
+	log.Print("INFO Stoping updates processing")
+}
 
-	log.Print("INFO Stopped updates processing")
+func handleTerminate(cancel context.CancelFunc) {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	<-stop
+
+	log.Print("WARN System interrupt or terminate signal")
+	cancel()
 }
 
 func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply) {
 	log.Print("INFO Start updates processing")
 	for update := range updates {
-		if update.Message == nil {
-			return
+		msg := update.Message
+		if msg == nil {
+			continue
 		}
 
-		msg := update.Message
 		txt := runCommand(msg)
 		replyQueue <- Reply{ChatID: msg.Chat.ID, Text: txt}
 	}
 
-	log.Print("DEBUG telegram updates channel was closed")
+	log.Print("INFO updates channel was closed")
 }
 
 func handleReply(queue chan Reply) {
@@ -110,5 +113,5 @@ func handleReply(queue chan Reply) {
 		}
 	}
 
-	log.Print("DEBUG reply queue channel was closed")
+	log.Print("INFO reply queue channel was closed")
 }
