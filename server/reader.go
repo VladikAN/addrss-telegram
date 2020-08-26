@@ -61,7 +61,7 @@ func (rd *Reader) readFeeds() error {
 	duration := time.Duration(rd.Interval) * time.Second
 
 	// Read feeds from db
-	feeds, err := db.GetForUpdate(rd.Feeds)
+	feeds, err := rd.DB.GetForUpdate(rd.Feeds)
 	if err != nil {
 		return err
 	}
@@ -69,28 +69,30 @@ func (rd *Reader) readFeeds() error {
 	stats := struct {
 		updated  int
 		notified int
+		feeds    int
 	}{}
 
 	// Read feeds from servers
 	for _, feed := range feeds {
 		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
 		if err != nil {
-			db.SetFeedBroken(feed.ID)
+			rd.DB.SetFeedBroken(feed.ID)
 			return fmt.Errorf("Feed '%s' unable to get updates: %s", feed.Normalized, err)
 		}
 
 		if len(updates) > 0 {
-			users, err := db.GetFeedUsers(feed.ID)
+			users, err := rd.DB.GetFeedUsers(feed.ID)
 			if err != nil {
 				return fmt.Errorf("Feed '%s' unable to get subscriptions: %s", feed.Normalized, err)
 			}
 
 			stats.updated += len(updates)
 			stats.notified += len(users)
+			stats.feeds++
 			rd.sendUpdates(updates, users)
 
 			last := parser.GetLast(updates)
-			err = db.SetFeedLastPub(feed.ID, *last.Date)
+			err = rd.DB.SetFeedLastPub(feed.ID, *last.Date)
 			if err != nil {
 				return fmt.Errorf("Feed '%s' unable to mark as updated with last publish date: %s", feed.Normalized, err)
 			}
@@ -98,14 +100,14 @@ func (rd *Reader) readFeeds() error {
 			continue
 		}
 
-		err = db.SetFeedUpdated(feed.ID)
+		err = rd.DB.SetFeedUpdated(feed.ID)
 		if err != nil {
 			return fmt.Errorf("Feed '%s' unable to mark as updated: %s", feed.Normalized, err)
 		}
 	}
 
 	if stats.updated > 0 {
-		log.Printf("INFO Reader found %d new post(s) and notified %d subscription(s)", stats.updated, stats.notified)
+		log.Printf("INFO Reader found %d new post(s) for %d feed(s) and notified %d subscription(s)", stats.updated, stats.feeds, stats.notified)
 	}
 
 	log.Printf("DEBUG Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
