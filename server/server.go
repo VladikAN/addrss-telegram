@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	log "github.com/go-pkgz/lgr"
@@ -100,7 +101,7 @@ func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply) {
 		replyQueue <- Reply{ChatID: msg.Chat.ID, Text: txt}
 	}
 
-	log.Print("INFO updates channel was closed")
+	log.Print("INFO Updates channel was closed")
 }
 
 func handleReply(queue chan Reply) {
@@ -109,9 +110,15 @@ func handleReply(queue chan Reply) {
 		rsp.ParseMode = "HTML"
 
 		if _, err := bot.Send(rsp); err != nil {
-			log.Printf("ERROR Problem while replying on %d chat: %s", msg.ChatID, err)
+			if strings.Contains(strings.ToLower(err.Error()), "forbidden") {
+				db.DeleteUser(msg.ChatID)
+				log.Printf("WARN user %d is blocked the bot and now deleted", msg.ChatID)
+				continue
+			}
+
+			log.Printf("ERROR %T Problem while replying on %d chat: %s", err, msg.ChatID, err)
 		}
 	}
 
-	log.Print("INFO reply queue channel was closed")
+	log.Print("INFO Reply queue channel was closed")
 }

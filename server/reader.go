@@ -89,7 +89,9 @@ func (rd *Reader) readFeeds() error {
 			stats.updated += len(updates)
 			stats.notified += len(users)
 			stats.feeds++
-			rd.sendUpdates(updates, users)
+			if len(users) > 0 {
+				rd.sendUpdates(updates, users)
+			}
 
 			last := parser.GetLast(updates)
 			err = rd.DB.SetFeedLastPub(feed.ID, *last.Date)

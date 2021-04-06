@@ -30,6 +30,9 @@ type Database interface {
 	// Unsubscribe unbind relation between user and feed
 	Unsubscribe(userID int64, feedID int) error
 
+	// DeleteUser will delete all user records
+	DeleteUser(userID int64) error
+
 	// GetUserFeeds gets user subscriptions
 	GetUserFeeds(userID int64) ([]Feed, error)
 
