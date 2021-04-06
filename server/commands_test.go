@@ -206,6 +206,7 @@ type dbMock struct {
 	addFeedMock               func() (*database.Feed, error)
 	subscribeMock             func() error
 	unsubscribeMock           func() error
+	deleteUserMock            func() error
 	getUserFeedsMock          func() ([]database.Feed, error)
 	getUserURIFeedMock        func() (*database.Feed, error)
 	getUserNormalizedFeedMock func() (*database.Feed, error)
@@ -223,6 +224,7 @@ func (db *dbMock) AddFeed(name string, normalized string, uri string) (*database
 }
 func (db *dbMock) Subscribe(userID int64, feedID int) error           { return db.subscribeMock() }
 func (db *dbMock) Unsubscribe(userID int64, feedID int) error         { return db.unsubscribeMock() }
+func (db *dbMock) DeleteUser(userID int64) error                      { return db.deleteUserMock() }
 func (db *dbMock) GetUserFeeds(userID int64) ([]database.Feed, error) { return db.getUserFeedsMock() }
 func (db *dbMock) GetUserURIFeed(userID int64, uri string) (*database.Feed, error) {
 	return db.getUserURIFeedMock()

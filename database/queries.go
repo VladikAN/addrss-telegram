@@ -49,6 +49,13 @@ func (db *Postgres) Unsubscribe(userID int64, feedID int) error {
 	return err
 }
 
+// DeleteUser will delete all user records
+func (db *Postgres) DeleteUser(userID int64) error {
+	query := `DELETE FROM userfeeds WHERE user_id = $1`
+	_, err := db.Pool.Exec(db.Context, query, userID)
+	return err
+}
+
 // GetUserFeeds gets user subscriptions
 func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
