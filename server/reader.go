@@ -61,7 +61,7 @@ func (rd *Reader) readFeeds() error {
 	duration := time.Duration(rd.Interval) * time.Second
 
 	// Read feeds from db
-	feeds, err := rd.DB.GetForUpdate(rd.Feeds)
+	feeds, err := rd.DB.GetFeeds(rd.Feeds)
 	if err != nil {
 		return err
 	}

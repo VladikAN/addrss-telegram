@@ -107,15 +107,16 @@ func (db *Postgres) GetFeed(uri string) (*Feed, error) {
 	return toFeed(row)
 }
 
-// GetForUpdate read specified count for update
-func (db *Postgres) GetForUpdate(count int) ([]Feed, error) {
+// GetFeeds read specified count for update
+func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	var feeds []Feed
 
 	// Get healthy or unhealthy for last day
-	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub
-	FROM feeds
-	WHERE healthy = TRUE OR updated < current_date
-	ORDER BY updated
+	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub
+	FROM feeds f
+	INNER JOIN userfeeds uf ON uf.feed_id = f.id 
+	WHERE f.healthy = TRUE OR f.updated < current_date
+	ORDER BY f.updated
 	LIMIT $1`
 
 	rows, err := db.Pool.Query(db.Context, query, count)
@@ -125,6 +126,17 @@ func (db *Postgres) GetForUpdate(count int) ([]Feed, error) {
 	}
 
 	return toFeeds(rows)
+}
+
+// ResetFeed updates feed dates to prevent spam to first subscription after some time
+func (db *Postgres) ResetFeed(feedID int) error {
+	query := `UPDATE feeds 
+	SET updated = CURRENT_TIMESTAMP,
+	last_pub = current_timestamp,
+	healthy = TRUE
+	WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM userfeeds WHERE feed_id = $1)`
+	_, err := db.Pool.Exec(db.Context, query, feedID)
+	return err
 }
 
 // GetFeedUsers returns active feed subscriptions
