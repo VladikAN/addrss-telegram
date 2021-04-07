@@ -71,6 +71,7 @@ func TestAdd_ErrorOnSubscribe(t *testing.T) {
 	db = &dbMock{
 		getUserURIFeedMock: func() (*database.Feed, error) { return nil, nil },
 		getFeedMock:        func() (*database.Feed, error) { return &database.Feed{}, nil },
+		resetFeedMock:      func() error { return nil },
 		subscribeMock:      func() error { return exp },
 	}
 
@@ -83,6 +84,7 @@ func TestAdd_SubscribeToExisting(t *testing.T) {
 	db = &dbMock{
 		getUserURIFeedMock: func() (*database.Feed, error) { return nil, nil },
 		getFeedMock:        func() (*database.Feed, error) { return &database.Feed{}, nil },
+		resetFeedMock:      func() error { return nil },
 		subscribeMock:      func() error { return nil },
 	}
 
@@ -211,7 +213,8 @@ type dbMock struct {
 	getUserURIFeedMock        func() (*database.Feed, error)
 	getUserNormalizedFeedMock func() (*database.Feed, error)
 	getFeedMock               func() (*database.Feed, error)
-	getForUpdateMock          func() ([]database.Feed, error)
+	getFeedsMock              func() ([]database.Feed, error)
+	resetFeedMock             func() error
 	getFeedUsersMock          func() ([]database.UserFeed, error)
 	setFeedUpdatedMock        func() error
 	setFeedLastPubMock        func() error
@@ -233,8 +236,9 @@ func (db *dbMock) GetUserNormalizedFeed(userID int64, normalized string) (*datab
 	return db.getUserNormalizedFeedMock()
 }
 func (db *dbMock) GetFeed(uri string) (*database.Feed, error)           { return db.getFeedMock() }
-func (db *dbMock) GetForUpdate(count int) ([]database.Feed, error)      { return db.getForUpdateMock() }
+func (db *dbMock) GetFeeds(count int) ([]database.Feed, error)          { return db.getFeedsMock() }
 func (db *dbMock) GetFeedUsers(feedID int) ([]database.UserFeed, error) { return db.getFeedUsersMock() }
+func (db *dbMock) ResetFeed(feedID int) error                           { return db.resetFeedMock() }
 func (db *dbMock) SetFeedUpdated(id int) error                          { return db.setFeedUpdatedMock() }
 func (db *dbMock) SetFeedLastPub(id int, lastPub time.Time) error       { return db.setFeedLastPubMock() }
 func (db *dbMock) SetFeedBroken(id int) error                           { return db.setFeedBrokenMock() }
