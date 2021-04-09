@@ -61,7 +61,7 @@ func (rd *Reader) readFeeds() error {
 	duration := time.Duration(rd.Interval) * time.Second
 
 	// Read feeds from db
-	feeds, err := rd.DB.GetForUpdate(rd.Feeds)
+	feeds, err := rd.DB.GetFeeds(rd.Feeds)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,9 @@ func (rd *Reader) readFeeds() error {
 			stats.updated += len(updates)
 			stats.notified += len(users)
 			stats.feeds++
-			rd.sendUpdates(updates, users)
+			if len(users) > 0 {
+				rd.sendUpdates(updates, users)
+			}
 
 			last := parser.GetLast(updates)
 			err = rd.DB.SetFeedLastPub(feed.ID, *last.Date)

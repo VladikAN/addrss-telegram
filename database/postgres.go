@@ -30,6 +30,9 @@ type Database interface {
 	// Unsubscribe unbind relation between user and feed
 	Unsubscribe(userID int64, feedID int) error
 
+	// DeleteUser will delete all user records
+	DeleteUser(userID int64) error
+
 	// GetUserFeeds gets user subscriptions
 	GetUserFeeds(userID int64) ([]Feed, error)
 
@@ -42,11 +45,14 @@ type Database interface {
 	// GetFeed get feed record by its uri (unique)
 	GetFeed(uri string) (*Feed, error)
 
-	// GetForUpdate read specified count for update
-	GetForUpdate(count int) ([]Feed, error)
+	// GetFeeds read specified count for update
+	GetFeeds(count int) ([]Feed, error)
 
 	// GetFeedUsers returns active feed subscriptions
 	GetFeedUsers(feedID int) ([]UserFeed, error)
+
+	// ResetFeed updates feed dates to prevent spam to first subscription after some time
+	ResetFeed(feedID int) error
 
 	// SetFeedUpdated update feed by new timespan and set healthy to true
 	SetFeedUpdated(id int) error

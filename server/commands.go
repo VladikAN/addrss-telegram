@@ -182,6 +182,8 @@ func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		_ = db.ResetFeed(feed.ID)
 	}
 
 	err = db.Subscribe(userID, feed.ID)
