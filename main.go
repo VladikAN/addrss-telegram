@@ -14,6 +14,7 @@ type opts struct {
 	Debug          bool   `long:"debug" env:"AR_DEBUG" description:"turn on-off debug messages"`
 	ReaderInterval int    `long:"reader-interval" env:"AR_READER_INTERVAL" default:"600" description:"Interval in seconds to read subscriptions for updates"`
 	ReaderFeeds    int    `long:"reader-feeds" env:"AR_READER_FEEDS" default:"100" description:"How many feeds to read between intervals"`
+	BotAdmin       int64  `long:"bot-admin" env:"AR_BOT_ADMIN" default:"0" description:"Bot admin user id for extra features"`
 }
 
 func main() {
@@ -41,6 +42,7 @@ func main() {
 		Debug:          op.Debug,
 		ReaderInterval: op.ReaderInterval,
 		ReaderFeeds:    op.ReaderFeeds,
+		BotAdmin:       op.BotAdmin,
 	}
 	server.Start(opt)
 }

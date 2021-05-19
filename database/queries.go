@@ -24,6 +24,17 @@ type UserFeed struct {
 	Added  *time.Time
 }
 
+// Stats represents basic service statistics
+type Stats struct {
+	Users int
+	Feeds int
+}
+
+// GetStats gets total number of users and feeds
+func (db *Postgres) GetStats() (*Stats, error) {
+	return nil, nil
+}
+
 // AddFeed inserts new feed to feeds postgres table
 func (db *Postgres) AddFeed(name string, normalized string, uri string) (*Feed, error) {
 	query := `INSERT INTO feeds (name, normalized, uri) VALUES ($1, $2, $3) ON CONFLICT (uri) DO NOTHING`

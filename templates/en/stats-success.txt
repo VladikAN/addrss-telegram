@@ -1,0 +1,2 @@
+{{.Users}} - Total users.
+{{.Feeds}} - Total feeds.

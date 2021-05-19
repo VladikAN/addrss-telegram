@@ -10,95 +10,117 @@ import (
 	"github.com/vladikan/addrss-telegram/templates"
 )
 
-// Command is used for propper method execution
+// Command is to aggregate message information and execute user command
 type Command struct {
-	UserID int64
-	Args   []string
-	Lang   string
+	userID int64
+	admin  bool
+	verb   string
+	args   string
+	fileId string
+	lang   string
+	raw    *tgbotapi.Message
 }
 
 var emptyText string
 
-func runCommand(msg *tgbotapi.Message) string {
-	log.Printf("DEBUG Received message: %s", msg.Text)
+func newCommand(msg *tgbotapi.Message, opt *Options) *Command {
+	cmd := &Command{
+		userID: msg.Chat.ID,
+		admin:  msg.Chat.ID == opt.BotAdmin,
+		verb:   msg.CommandWithAt(),
+		args:   msg.CommandArguments(),
+		lang:   msg.From.LanguageCode,
+		raw:    msg,
+	}
+
+	if msg.Document != nil {
+		cmd.fileId = msg.Document.FileID
+	}
+
+	return cmd
+}
+
+func (cmd *Command) run() string {
+	log.Printf("DEBUG Received message: %s", cmd.raw.Text)
 
 	var response string
 	var err error
 
-	command := &Command{UserID: msg.Chat.ID, Lang: msg.From.LanguageCode}
-	if msg.Document != nil {
-		command.Args = []string{msg.Document.FileID}
-		response, err = command.importOpml()
+	if len(cmd.fileId) != 0 {
+		response, err = cmd.importOpml()
 	}
 
-	if cmd := msg.CommandWithAt(); len(cmd) > 0 {
-		args := msg.CommandArguments()
-
-		switch cmd {
+	if len(cmd.verb) > 0 {
+		switch cmd.verb {
 		case "start":
-			response, err = command.start()
+			response, err = cmd.start()
 		case "help":
-			response, err = command.help()
+			response, err = cmd.help()
 		case "add":
-			command.Args = splitURI(args)
-			response, err = command.add()
+			response, err = cmd.add()
 		case "import":
-			response, err = command.importOpml() // simply call for validation message
+			response, err = cmd.importOpml() // simply call for validation message
 		case "remove":
-			command.Args = splitNonEmpty(args)
-			response, err = command.remove()
+			response, err = cmd.remove()
 		case "list":
-			response, err = command.list()
+			response, err = cmd.list()
 		}
 	}
 
 	if err != nil {
-		log.Printf("ERROR user %d command '%s' completed with error: '%s'", msg.From.ID, msg.Text, err)
-		response, _ = templates.ToText(command.Lang, "cmd-error")
+		log.Printf("ERROR user %d command '%s' completed with error: '%s'", cmd.userID, cmd.raw.Text, err)
+		response, _ = templates.ToText(cmd.lang, "cmd-error")
 	}
 
 	if len(response) == 0 {
-		log.Printf("WARN command '%s' is unknown", msg.Text)
-		response, _ = templates.ToText(command.Lang, "cmd-unknown")
+		log.Printf("WARN command '%s' is unknown", cmd.raw.Text)
+		response, _ = templates.ToText(cmd.lang, "cmd-unknown")
 	}
 
 	return response
 }
 
+func (cmd *Command) stats() (string, error) {
+	if !cmd.admin {
+		return "", nil
+	}
+
+	return "", nil
+}
+
 func (cmd *Command) start() (string, error) {
-	return templates.ToText(cmd.Lang, "start-success")
+	return templates.ToText(cmd.lang, "start-success")
 }
 
 func (cmd *Command) help() (string, error) {
-	return templates.ToText(cmd.Lang, "help-success")
+	return templates.ToText(cmd.lang, "help-success")
 }
 
 func (cmd *Command) add() (string, error) {
-	if len(cmd.Args) == 0 {
-		return templates.ToText(cmd.Lang, "add-validation")
+	if len(cmd.args) == 0 {
+		return templates.ToText(cmd.lang, "add-validation")
 	}
 
-	uri := cmd.Args[0] // will use only one for now
-	if userFeed, err := db.GetUserURIFeed(cmd.UserID, uri); err != nil {
+	if userFeed, err := db.GetUserURIFeed(cmd.userID, cmd.args); err != nil {
 		return emptyText, err
 	} else if userFeed != nil {
-		return templates.ToTextW(cmd.Lang, "add-exists", userFeed)
+		return templates.ToTextW(cmd.lang, "add-exists", userFeed)
 	}
 
-	feed, err := addFeed(cmd.UserID, uri, "")
+	feed, err := addFeed(cmd.userID, cmd.args, "")
 	if err != nil {
 		return emptyText, err
 	}
 
-	return templates.ToTextW(cmd.Lang, "add-success", feed)
+	return templates.ToTextW(cmd.lang, "add-success", feed)
 }
 
 func (cmd *Command) importOpml() (string, error) {
-	if len(cmd.Args) == 0 {
-		return templates.ToText(cmd.Lang, "import-validation")
+	if len(cmd.fileId) == 0 {
+		return templates.ToText(cmd.lang, "import-validation")
 	}
 
-	fl, err := bot.GetFileDirectURL(cmd.Args[0])
+	fl, err := bot.GetFileDirectURL(cmd.fileId)
 	if err != nil {
 		return emptyText, err
 	}
@@ -114,7 +136,7 @@ func (cmd *Command) importOpml() (string, error) {
 	}{}
 
 	for _, item := range items {
-		_, err = addFeed(cmd.UserID, item.URL, item.Title)
+		_, err = addFeed(cmd.userID, item.URL, item.Title)
 		if err != nil {
 			log.Printf("ERROR Feed '%s' was not imported with error: '%s'", item.URL, err)
 			result.Errors++
@@ -123,45 +145,43 @@ func (cmd *Command) importOpml() (string, error) {
 		}
 	}
 
-	return templates.ToTextW(cmd.Lang, "import-success", result)
+	return templates.ToTextW(cmd.lang, "import-success", result)
 }
 
 func (cmd *Command) remove() (string, error) {
-	if len(cmd.Args) == 0 {
-		return templates.ToText(cmd.Lang, "remove-validation")
+	if len(cmd.args) == 0 {
+		return templates.ToText(cmd.lang, "remove-validation")
 	}
 
-	name := cmd.Args[0] // will use only one for now
-	feed, err := db.GetUserNormalizedFeed(cmd.UserID, name)
-
+	feed, err := db.GetUserNormalizedFeed(cmd.userID, cmd.args)
 	if err != nil {
 		return emptyText, err
 	}
 
 	if feed == nil {
-		return templates.ToText(cmd.Lang, "remove-no-rows")
+		return templates.ToText(cmd.lang, "remove-no-rows")
 	}
 
-	err = db.Unsubscribe(cmd.UserID, feed.ID)
+	err = db.Unsubscribe(cmd.userID, feed.ID)
 	if err != nil {
 		return emptyText, err
 	}
 
-	return templates.ToTextW(cmd.Lang, "remove-success", feed)
+	return templates.ToTextW(cmd.lang, "remove-success", feed)
 }
 
 func (cmd *Command) list() (string, error) {
-	feeds, err := db.GetUserFeeds(cmd.UserID)
+	feeds, err := db.GetUserFeeds(cmd.userID)
 
 	if err != nil {
 		return emptyText, err
 	}
 
 	if len(feeds) == 0 {
-		return templates.ToText(cmd.Lang, "list-empty")
+		return templates.ToText(cmd.lang, "list-empty")
 	}
 
-	return templates.ToTextW(cmd.Lang, "list-result", feeds)
+	return templates.ToTextW(cmd.lang, "list-result", feeds)
 }
 
 func addFeed(userID int64, uri string, title string) (*database.Feed, error) {

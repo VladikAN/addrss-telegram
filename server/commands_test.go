@@ -41,7 +41,7 @@ func TestAdd_ErrorOnReadActiveSubscription(t *testing.T) {
 		getUserURIFeedMock: func() (*database.Feed, error) { return nil, exp },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertError(t, r, err, exp)
 }
 
@@ -51,7 +51,7 @@ func TestAdd_FeedAlreadyExists(t *testing.T) {
 		getUserURIFeedMock: func() (*database.Feed, error) { return &database.Feed{}, nil },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -62,7 +62,7 @@ func TestAdd_ErrorOnGetFeed(t *testing.T) {
 		getFeedMock:        func() (*database.Feed, error) { return nil, exp },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertError(t, r, err, exp)
 }
 
@@ -75,7 +75,7 @@ func TestAdd_ErrorOnSubscribe(t *testing.T) {
 		subscribeMock:      func() error { return exp },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertError(t, r, err, exp)
 }
 
@@ -88,7 +88,7 @@ func TestAdd_SubscribeToExisting(t *testing.T) {
 		subscribeMock:      func() error { return nil },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -104,7 +104,7 @@ func TestRemove_ErrorOnGetNormalized(t *testing.T) {
 		getUserNormalizedFeedMock: func() (*database.Feed, error) { return nil, exp },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertError(t, r, err, exp)
 }
 
@@ -114,7 +114,7 @@ func TestRemove_NoRowsToRemove(t *testing.T) {
 		getUserNormalizedFeedMock: func() (*database.Feed, error) { return nil, nil },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -125,7 +125,7 @@ func TestRemove_ErrorOnUnsubscribe(t *testing.T) {
 		unsubscribeMock:           func() error { return exp },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertError(t, r, err, exp)
 }
 
@@ -136,7 +136,7 @@ func TestRemove_Unsubscribed(t *testing.T) {
 		unsubscribeMock:           func() error { return nil },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -205,6 +205,7 @@ func setup() {
 }
 
 type dbMock struct {
+	getStatsMock              func() (*database.Stats, error)
 	addFeedMock               func() (*database.Feed, error)
 	subscribeMock             func() error
 	unsubscribeMock           func() error
@@ -221,7 +222,8 @@ type dbMock struct {
 	setFeedBrokenMock         func() error
 }
 
-func (db *dbMock) Close() {}
+func (db *dbMock) Close()                             {}
+func (db *dbMock) GetStats() (*database.Stats, error) { return db.getStatsMock() }
 func (db *dbMock) AddFeed(name string, normalized string, uri string) (*database.Feed, error) {
 	return db.addFeedMock()
 }
