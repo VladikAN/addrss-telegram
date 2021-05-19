@@ -17,6 +17,30 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestStats_EmptyForNonAdmin(t *testing.T) {
+	r, err := (&Command{}).stats()
+	assertTemplate(t, r, "cmd-unknown", err)
+}
+
+func TestStats_ErrorOnQuery(t *testing.T) {
+	exp := errors.New("test")
+	db = &dbMock{
+		getStatsMock: func() (*database.Stats, error) { return nil, exp },
+	}
+
+	r, err := (&Command{admin: true}).stats()
+	assertError(t, r, err, exp)
+}
+
+func TestStats_Success(t *testing.T) {
+	db = &dbMock{
+		getStatsMock: func() (*database.Stats, error) { return &database.Stats{Users: 1, Feeds: 2}, nil },
+	}
+
+	r, err := (&Command{admin: true}).stats()
+	assertTemplate(t, r, "stats-success", err)
+}
+
 func TestStart(t *testing.T) {
 	exp := "start-success"
 	r, err := (&Command{}).start()
@@ -41,7 +65,7 @@ func TestAdd_ErrorOnReadActiveSubscription(t *testing.T) {
 		getUserURIFeedMock: func() (*database.Feed, error) { return nil, exp },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertError(t, r, err, exp)
 }
 
@@ -51,7 +75,7 @@ func TestAdd_FeedAlreadyExists(t *testing.T) {
 		getUserURIFeedMock: func() (*database.Feed, error) { return &database.Feed{}, nil },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -62,7 +86,7 @@ func TestAdd_ErrorOnGetFeed(t *testing.T) {
 		getFeedMock:        func() (*database.Feed, error) { return nil, exp },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertError(t, r, err, exp)
 }
 
@@ -75,7 +99,7 @@ func TestAdd_ErrorOnSubscribe(t *testing.T) {
 		subscribeMock:      func() error { return exp },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertError(t, r, err, exp)
 }
 
@@ -88,7 +112,7 @@ func TestAdd_SubscribeToExisting(t *testing.T) {
 		subscribeMock:      func() error { return nil },
 	}
 
-	r, err := (&Command{Args: []string{"URI"}}).add()
+	r, err := (&Command{args: "URI"}).add()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -104,7 +128,7 @@ func TestRemove_ErrorOnGetNormalized(t *testing.T) {
 		getUserNormalizedFeedMock: func() (*database.Feed, error) { return nil, exp },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertError(t, r, err, exp)
 }
 
@@ -114,7 +138,7 @@ func TestRemove_NoRowsToRemove(t *testing.T) {
 		getUserNormalizedFeedMock: func() (*database.Feed, error) { return nil, nil },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -125,7 +149,7 @@ func TestRemove_ErrorOnUnsubscribe(t *testing.T) {
 		unsubscribeMock:           func() error { return exp },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertError(t, r, err, exp)
 }
 
@@ -136,7 +160,7 @@ func TestRemove_Unsubscribed(t *testing.T) {
 		unsubscribeMock:           func() error { return nil },
 	}
 
-	r, err := (&Command{Args: []string{"name"}}).remove()
+	r, err := (&Command{args: "name"}).remove()
 	assertTemplate(t, r, exp, err)
 }
 
@@ -176,23 +200,23 @@ func TestList_ListFeeds(t *testing.T) {
 	assertTemplate(t, r, exp, err)
 }
 
-func assertError(t *testing.T, name string, err error, exp error) {
+func assertError(t *testing.T, resp string, err error, exp error) {
 	if err != exp {
 		t.Errorf("Expected error '%s', but was '%s'", exp, err)
 	}
 
-	if len(name) != 0 {
-		t.Errorf("Expected empty response string, but was '%s'", name)
+	if len(resp) != 0 {
+		t.Errorf("Expected empty response string, but was '%s'", resp)
 	}
 }
 
-func assertTemplate(t *testing.T, name string, exp string, err error) {
+func assertTemplate(t *testing.T, resp string, exp string, err error) {
 	if err != nil {
 		t.Errorf("Error was not expected, but was '%s'", err)
 	}
 
-	if name != exp {
-		t.Errorf("Expected '%s', but was '%s'", exp, name)
+	if resp != exp {
+		t.Errorf("Expected '%s', but was '%s'", exp, resp)
 	}
 }
 
@@ -205,6 +229,7 @@ func setup() {
 }
 
 type dbMock struct {
+	getStatsMock              func() (*database.Stats, error)
 	addFeedMock               func() (*database.Feed, error)
 	subscribeMock             func() error
 	unsubscribeMock           func() error
@@ -221,7 +246,8 @@ type dbMock struct {
 	setFeedBrokenMock         func() error
 }
 
-func (db *dbMock) Close() {}
+func (db *dbMock) Close()                             {}
+func (db *dbMock) GetStats() (*database.Stats, error) { return db.getStatsMock() }
 func (db *dbMock) AddFeed(name string, normalized string, uri string) (*database.Feed, error) {
 	return db.addFeedMock()
 }

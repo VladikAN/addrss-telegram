@@ -24,6 +24,31 @@ type UserFeed struct {
 	Added  *time.Time
 }
 
+// Stats represents basic service statistics
+type Stats struct {
+	Users int
+	Feeds int
+}
+
+// GetStats gets total number of users and feeds
+func (db *Postgres) GetStats() (*Stats, error) {
+	result := &Stats{}
+
+	usersQuery := `SELECT COUNT(DISTINCT user_id) from userFeeds`
+	usersRow := db.Pool.QueryRow(db.Context, usersQuery)
+	if err := usersRow.Scan(&result.Users); err != nil {
+		return nil, err
+	}
+
+	feedsQuery := `SELECT COUNT(DISTINCT uri) from feeds`
+	feedsRow := db.Pool.QueryRow(db.Context, feedsQuery)
+	if err := feedsRow.Scan(&result.Feeds); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 // AddFeed inserts new feed to feeds postgres table
 func (db *Postgres) AddFeed(name string, normalized string, uri string) (*Feed, error) {
 	query := `INSERT INTO feeds (name, normalized, uri) VALUES ($1, $2, $3) ON CONFLICT (uri) DO NOTHING`

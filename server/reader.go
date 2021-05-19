@@ -109,7 +109,7 @@ func (rd *Reader) readFeeds() error {
 	}
 
 	if stats.updated > 0 {
-		log.Printf("INFO Reader found %d new post(s) for %d feed(s) and notified %d subscription(s)", stats.updated, stats.feeds, stats.notified)
+		log.Printf("DEBUG Reader found %d new post(s) for %d feed(s) and notified %d subscription(s)", stats.updated, stats.feeds, stats.notified)
 	}
 
 	log.Printf("DEBUG Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
