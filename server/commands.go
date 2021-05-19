@@ -52,6 +52,8 @@ func (cmd *Command) run() string {
 
 	if len(cmd.verb) > 0 {
 		switch cmd.verb {
+		case "stats":
+			response, err = cmd.stats()
 		case "start":
 			response, err = cmd.start()
 		case "help":
@@ -82,10 +84,15 @@ func (cmd *Command) run() string {
 
 func (cmd *Command) stats() (string, error) {
 	if !cmd.admin {
-		return "", nil
+		log.Printf("WARN Someone is calling /stats with no admin rights, user %d", cmd.userID)
+		return templates.ToText(cmd.lang, "cmd-unknown")
 	}
 
-	return "", nil
+	if stats, err := db.GetStats(); err != nil {
+		return "", err
+	} else {
+		return templates.ToTextW(cmd.lang, "stats-success", stats)
+	}
 }
 
 func (cmd *Command) start() (string, error) {

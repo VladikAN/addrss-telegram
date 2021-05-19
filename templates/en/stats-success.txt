@@ -1,2 +1,4 @@
+Bot statistics.
+
 {{.Users}} - Total users.
 {{.Feeds}} - Total feeds.
