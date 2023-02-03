@@ -24,7 +24,7 @@ func GetTitle(uri string) (string, error) {
 
 	feed, err := fp.ParseURL(uri)
 	if err != nil {
-		return "", fmt.Errorf("Unable to read '%s': %s", uri, err)
+		return "", fmt.Errorf("unable to read '%s': %s", uri, err)
 	}
 
 	return feed.Title, nil
@@ -35,7 +35,7 @@ func GetUpdates(uri string, since time.Time) ([]Topic, error) {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(uri)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read '%s': %s", uri, err)
+		return nil, fmt.Errorf("unable read '%s': %s", uri, err)
 	}
 
 	if feed == nil {
