@@ -41,7 +41,7 @@ func newCommand(msg *tgbotapi.Message, opt *Options) *Command {
 }
 
 func (cmd *Command) run() string {
-	log.Printf("DEBUG Received message: %s", cmd.raw.Text)
+	log.Printf("DEBUG request: %s", cmd.raw.Text)
 
 	var response string
 	var err error
@@ -67,6 +67,8 @@ func (cmd *Command) run() string {
 		case "list":
 			response, err = cmd.list()
 		}
+
+		log.Printf("INFO User %d call '%s'", cmd.userID, cmd.verb)
 	}
 
 	if err != nil {
@@ -134,7 +136,7 @@ func (cmd *Command) importOpml() (string, error) {
 
 	items, err := parser.ReadOmpl(fl)
 	if err != nil {
-		return emptyText, fmt.Errorf("Error while parsing OMPL file, %s", err)
+		return emptyText, fmt.Errorf("error while parsing OMPL file, %s", err)
 	}
 
 	result := struct {
