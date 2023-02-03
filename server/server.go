@@ -20,6 +20,7 @@ type Options struct {
 	Debug          bool
 	ReaderInterval int
 	ReaderFeeds    int
+	BotAdmin       int64
 }
 
 // Reply is a message to be sent to user/chat
@@ -69,8 +70,8 @@ func Start(options Options) {
 	defer reader.Stop()
 
 	// Read commands from users
-	updates, err := bot.GetUpdatesChan(cfg)
-	go handleRequests(updates, replyQueue)
+	updates, _ := bot.GetUpdatesChan(cfg)
+	go handleRequests(updates, replyQueue, &options)
 	defer bot.StopReceivingUpdates()
 
 	// Stop bot operations and close all connections
@@ -89,7 +90,7 @@ func handleTerminate(cancel context.CancelFunc) {
 	cancel()
 }
 
-func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply) {
+func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply, opt *Options) {
 	log.Print("INFO Start updates processing")
 	for update := range updates {
 		msg := update.Message
@@ -97,7 +98,8 @@ func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply) {
 			continue
 		}
 
-		txt := runCommand(msg)
+		cmd := newCommand(msg, opt)
+		txt := cmd.run()
 		replyQueue <- Reply{ChatID: msg.Chat.ID, Text: txt}
 	}
 
