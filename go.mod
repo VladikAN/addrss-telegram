@@ -1,6 +1,6 @@
 module github.com/vladikan/addrss-telegram
 
-go 1.19
+go 1.20
 
 require (
 	github.com/go-pkgz/lgr v0.10.4
