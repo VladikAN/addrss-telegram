@@ -32,7 +32,7 @@ func (rd *Reader) Start() {
 		read := func() {
 			err := rd.readFeeds()
 			if err != nil {
-				log.Printf("ERROR Reader job completed with error: %s", err)
+				log.Printf("ERROR reader fault: %s", err)
 			}
 		}
 
@@ -57,7 +57,7 @@ func (rd *Reader) Stop() {
 }
 
 func (rd *Reader) readFeeds() error {
-	log.Printf("DEBUG Reader job started. %d feeds to be readed", rd.Feeds)
+	log.Printf("DEBUG Reader job started. %d feeds to read", rd.Feeds)
 	duration := time.Duration(rd.Interval) * time.Second
 
 	// Read feeds from db
@@ -77,13 +77,13 @@ func (rd *Reader) readFeeds() error {
 		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
 		if err != nil {
 			rd.DB.SetFeedBroken(feed.ID)
-			return fmt.Errorf("Feed '%s' unable to get updates: %s", feed.Normalized, err)
+			return fmt.Errorf("feed '%s' unable get updates: %s", feed.Normalized, err)
 		}
 
 		if len(updates) > 0 {
 			users, err := rd.DB.GetFeedUsers(feed.ID)
 			if err != nil {
-				return fmt.Errorf("Feed '%s' unable to get subscriptions: %s", feed.Normalized, err)
+				return fmt.Errorf("feed '%s' unable get subscriptions: %s", feed.Normalized, err)
 			}
 
 			stats.updated += len(updates)
@@ -96,7 +96,7 @@ func (rd *Reader) readFeeds() error {
 			last := parser.GetLast(updates)
 			err = rd.DB.SetFeedLastPub(feed.ID, *last.Date)
 			if err != nil {
-				return fmt.Errorf("Feed '%s' unable to mark as updated with last publish date: %s", feed.Normalized, err)
+				return fmt.Errorf("feed '%s' unable update publish date: %s", feed.Normalized, err)
 			}
 
 			continue
@@ -104,7 +104,7 @@ func (rd *Reader) readFeeds() error {
 
 		err = rd.DB.SetFeedUpdated(feed.ID)
 		if err != nil {
-			return fmt.Errorf("Feed '%s' unable to mark as updated: %s", feed.Normalized, err)
+			return fmt.Errorf("feed '%s' unable mark as updated: %s", feed.Normalized, err)
 		}
 	}
 
