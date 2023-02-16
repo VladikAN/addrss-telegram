@@ -8,13 +8,14 @@ import (
 
 // Feed represents feed db table structure
 type Feed struct {
-	ID         int
-	Name       string
-	Normalized string
-	URI        string
-	Updated    *time.Time
-	Healthy    bool
-	LastPub    *time.Time
+	ID             int
+	Name           string
+	Normalized     string
+	URI            string
+	Updated        *time.Time
+	Healthy        bool
+	UnhealthySince *time.Time
+	LastPub        *time.Time
 }
 
 // UserFeed represents user subscription to the feed
@@ -85,7 +86,7 @@ func (db *Postgres) DeleteUser(userID int64) error {
 func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.unhealthySince, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
@@ -101,7 +102,7 @@ func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 
 // GetUserURIFeed get user subscription by its uri (unique)
 func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.unhealthySince, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
 	LIMIT 1`
@@ -112,7 +113,7 @@ func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 
 // GetUserNormalizedFeed get user subscription by its normalized name
 func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.unhealthySince, f.last_pub FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
 	LIMIT 1`
@@ -123,7 +124,7 @@ func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Fee
 
 // GetFeed get feed record by its uri (unique)
 func (db *Postgres) GetFeed(uri string) (*Feed, error) {
-	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub
+	query := `SELECT id, name, normalized, uri, updated, healthy, unhealthySince, last_pub
 	FROM feeds
 	WHERE uri = $1
 	LIMIT 1`
@@ -137,7 +138,7 @@ func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	var feeds []Feed
 
 	// Get healthy or unhealthy for last day
-	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub
+	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.unhealthySince, f.last_pub
 	FROM feeds f
 	INNER JOIN userfeeds uf ON uf.feed_id = f.id 
 	WHERE f.healthy = TRUE OR f.updated < current_date
@@ -158,7 +159,8 @@ func (db *Postgres) ResetFeed(feedID int) error {
 	query := `UPDATE feeds 
 	SET updated = CURRENT_TIMESTAMP,
 	last_pub = current_timestamp,
-	healthy = TRUE
+	healthy = TRUE,
+	unhealthySince = NULL
 	WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM userfeeds WHERE feed_id = $1)`
 	_, err := db.Pool.Exec(db.Context, query, feedID)
 	return err
@@ -190,7 +192,8 @@ func (db *Postgres) GetFeedUsers(feedID int) ([]UserFeed, error) {
 func (db *Postgres) SetFeedUpdated(id int) error {
 	query := `UPDATE feeds
 	SET updated = $1,
-	healthy = TRUE
+	healthy = TRUE,
+	unhealthySince = NULL
 	WHERE id = $2`
 
 	_, err := db.Pool.Exec(db.Context, query, time.Now(), id)
@@ -202,6 +205,7 @@ func (db *Postgres) SetFeedLastPub(id int, lastPub time.Time) error {
 	query := `UPDATE feeds
 	SET updated = $1,
 	healthy = TRUE,
+	unhealthySince = NULL,
 	last_pub = $2
 	WHERE id = $3`
 
@@ -213,7 +217,8 @@ func (db *Postgres) SetFeedLastPub(id int, lastPub time.Time) error {
 func (db *Postgres) SetFeedBroken(id int) error {
 	query := `UPDATE feeds
 	SET updated = $1,
-	healthy = FALSE
+	healthy = FALSE,
+	unhealthySince = COALESCE(unhealthySince, current_date)
 	WHERE id = $2`
 
 	_, err := db.Pool.Exec(db.Context, query, time.Now(), id)
@@ -227,17 +232,19 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var uri string
 	var updated *time.Time
 	var healthy bool
+	var unhealthySince *time.Time
 	var lastPub *time.Time
 
-	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &lastPub); err == nil {
+	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &unhealthySince, &lastPub); err == nil {
 		return &Feed{
-			ID:         id,
-			Name:       name,
-			Normalized: normalized,
-			URI:        uri,
-			Updated:    updated,
-			Healthy:    healthy,
-			LastPub:    lastPub,
+			ID:             id,
+			Name:           name,
+			Normalized:     normalized,
+			URI:            uri,
+			Updated:        updated,
+			Healthy:        healthy,
+			UnhealthySince: unhealthySince,
+			LastPub:        lastPub,
 		}, err
 	} else if err == pgx.ErrNoRows {
 		return nil, nil
