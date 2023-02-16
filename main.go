@@ -25,7 +25,7 @@ func main() {
 	}
 
 	if len(op.Token) == 0 {
-		panic("PANIC bot token is not defined")
+		panic("PANIC bot token is missed")
 	}
 
 	// Setup logger
