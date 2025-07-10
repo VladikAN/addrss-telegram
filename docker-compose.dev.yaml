@@ -9,5 +9,6 @@ services:
       image: vladikan/addrss:latest
       build: .
       environment:
-        - AR_TOKEN
+        - AR_TOKEN=1380627833:AAGxvCYoNz_JVR2XGkmtZxDqr1Fs1vj3tNU
+        - AR_BOT_ADMIN=348071017
         - AR_DATABASE=postgres://admin:admin@postgres/feed

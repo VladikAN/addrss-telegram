@@ -5,3 +5,5 @@ Call /add [uri] to add a new subscription to the list. URI must start with the h
 And /remove [name] to remove the subscription from the list.
 
 Also you can use /import or just upload OPML file from any other feed reader to import all feeds at once.
+
+Use /feedback [message] to send feedback to the bot administrator.

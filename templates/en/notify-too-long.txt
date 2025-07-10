@@ -1,0 +1,1 @@
+Your notification message is too long. Please keep it under {{.}} characters. 

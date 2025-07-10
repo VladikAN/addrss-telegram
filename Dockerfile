@@ -1,5 +1,5 @@
 # Build image definition
-FROM golang:1.20 AS builder
+FROM golang:1.24 AS builder
 WORKDIR /src/
 COPY . .
 RUN go test ./...
