@@ -67,9 +67,9 @@ func (rd *Reader) readFeeds() error {
 	}
 
 	stats := struct {
-		updated  int
-		notified int
-		feeds    int
+		updated    int
+		notified   int
+		feeds      int
 		duplicates int
 	}{}
 
