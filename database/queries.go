@@ -223,6 +223,28 @@ func (db *Postgres) SetFeedBroken(id int) error {
 	return err
 }
 
+// GetAllUsers returns all unique user IDs who have subscribed to feeds
+func (db *Postgres) GetAllUsers() ([]int64, error) {
+	query := `SELECT DISTINCT user_id FROM userfeeds`
+	rows, err := db.Pool.Query(db.Context, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []int64
+	for rows.Next() {
+		var userID int64
+		err = rows.Scan(&userID)
+		if err != nil {
+			return users, err
+		}
+		users = append(users, userID)
+	}
+
+	return users, nil
+}
+
 func toFeed(row pgx.Row) (*Feed, error) {
 	var id int
 	var name string

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"strings"
 
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -12,25 +13,29 @@ import (
 
 // Command is to aggregate message information and execute user command
 type Command struct {
-	userID int64
-	admin  bool
-	verb   string
-	args   string
-	fileId string
-	lang   string
-	raw    *tgbotapi.Message
+	userID     int64
+	admin      bool
+	adminID    int64
+	verb       string
+	args       string
+	fileId     string
+	lang       string
+	raw        *tgbotapi.Message
+	replyQueue chan Reply
 }
 
 var emptyText string
 
-func newCommand(msg *tgbotapi.Message, opt *Options) *Command {
+func newCommand(msg *tgbotapi.Message, opt *Options, replyQueue chan Reply) *Command {
 	cmd := &Command{
-		userID: msg.Chat.ID,
-		admin:  msg.Chat.ID == opt.BotAdmin,
-		verb:   msg.CommandWithAt(),
-		args:   msg.CommandArguments(),
-		lang:   msg.From.LanguageCode,
-		raw:    msg,
+		userID:     msg.Chat.ID,
+		admin:      msg.Chat.ID == opt.BotAdmin,
+		adminID:    opt.BotAdmin,
+		verb:       msg.CommandWithAt(),
+		args:       msg.CommandArguments(),
+		lang:       msg.From.LanguageCode,
+		raw:        msg,
+		replyQueue: replyQueue,
 	}
 
 	if msg.Document != nil {
@@ -40,9 +45,10 @@ func newCommand(msg *tgbotapi.Message, opt *Options) *Command {
 	return cmd
 }
 
-func (cmd *Command) run() string {
+func (cmd *Command) run() []Reply {
 	log.Printf("DEBUG request: %s", cmd.raw.Text)
 
+	var replies []Reply
 	var response string
 	var err error
 
@@ -54,6 +60,8 @@ func (cmd *Command) run() string {
 		switch cmd.verb {
 		case "stats":
 			response, err = cmd.stats()
+		case "notify":
+			replies = cmd.notifyMulti()
 		case "start":
 			response, err = cmd.start()
 		case "help":
@@ -66,9 +74,15 @@ func (cmd *Command) run() string {
 			response, err = cmd.remove()
 		case "list":
 			response, err = cmd.list()
+		case "feedback":
+			replies = cmd.feedbackMulti()
 		}
 
 		log.Printf("INFO User %d call '%s'", cmd.userID, cmd.verb)
+	}
+
+	if len(replies) > 0 {
+		return replies
 	}
 
 	if err != nil {
@@ -81,7 +95,7 @@ func (cmd *Command) run() string {
 		response, _ = templates.ToText(cmd.lang, "cmd-unknown")
 	}
 
-	return response
+	return []Reply{{ChatID: cmd.userID, Text: response}}
 }
 
 func (cmd *Command) stats() (string, error) {
@@ -221,4 +235,73 @@ func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
 	}
 
 	return feed, nil
+}
+
+func (cmd *Command) feedbackMulti() []Reply {
+	const maxFeedbackLength = 1000
+	var replies []Reply
+
+	if len(strings.TrimSpace(cmd.args)) == 0 {
+		text, _ := templates.ToText(cmd.lang, "feedback-validation")
+		replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+		return replies
+	}
+
+	if len(cmd.args) > maxFeedbackLength {
+		text, _ := templates.ToTextW(cmd.lang, "feedback-too-long", maxFeedbackLength)
+		replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+		return replies
+	}
+
+	feedbackText, _ := templates.ToTextW(cmd.lang, "feedback-message", struct {
+		UserID  int64
+		Message string
+	}{cmd.userID, cmd.args})
+	replies = append(replies, Reply{ChatID: cmd.adminID, Text: feedbackText})
+	text, _ := templates.ToText(cmd.lang, "feedback-success")
+	replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+	return replies
+}
+
+func (cmd *Command) notifyMulti() []Reply {
+	const maxNotifyLength = 2000
+	var replies []Reply
+
+	if !cmd.admin {
+		text, _ := templates.ToText(cmd.lang, "cmd-unknown")
+		replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+		return replies
+	}
+
+	if len(strings.TrimSpace(cmd.args)) == 0 {
+		text, _ := templates.ToText(cmd.lang, "notify-validation")
+		replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+		return replies
+	}
+
+	if len(cmd.args) > maxNotifyLength {
+		text, _ := templates.ToTextW(cmd.lang, "notify-too-long", maxNotifyLength)
+		replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+		return replies
+	}
+
+	userIDs, err := db.GetAllUsers()
+	if err != nil {
+		text, _ := templates.ToText(cmd.lang, "notify-error")
+		replies = append(replies, Reply{ChatID: cmd.userID, Text: text})
+		return replies
+	}
+
+	notificationText, _ := templates.ToTextW(cmd.lang, "notify-message", struct {
+		Message string
+	}{cmd.args})
+	for _, userID := range userIDs {
+		replies = append(replies, Reply{ChatID: userID, Text: notificationText})
+	}
+
+	summary, _ := templates.ToTextW(cmd.lang, "notify-success", struct {
+		Total int
+	}{len(userIDs)})
+	replies = append(replies, Reply{ChatID: cmd.userID, Text: summary})
+	return replies
 }

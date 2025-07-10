@@ -54,6 +54,9 @@ type Database interface {
 	// GetFeedUsers returns active feed subscriptions
 	GetFeedUsers(feedID int) ([]UserFeed, error)
 
+	// GetAllUsers returns all unique user IDs who have subscribed to feeds
+	GetAllUsers() ([]int64, error)
+
 	// ResetFeed updates feed dates to prevent spam to first subscription after some time
 	ResetFeed(feedID int) error
 

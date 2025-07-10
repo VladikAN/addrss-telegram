@@ -1,0 +1,3 @@
+Notification sent successfully!
+
+Total users: {{.Total}} 
