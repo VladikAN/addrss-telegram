@@ -60,8 +60,8 @@ type Database interface {
 	// SetFeedUpdated update feed by new timespan and set healthy to true
 	SetFeedUpdated(id int) error
 
-	// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date
-	SetFeedLastPub(id int, lastPub time.Time) error
+	// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date and URI
+	SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error
 
 	// SetFeedBroken update feed by setting healthy to false
 	SetFeedBroken(id int) error
