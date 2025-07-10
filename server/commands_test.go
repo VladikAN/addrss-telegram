@@ -200,6 +200,173 @@ func TestList_ListFeeds(t *testing.T) {
 	assertTemplate(t, r, exp, err)
 }
 
+// Feedback command tests
+func TestFeedback_NoArgs(t *testing.T) {
+	exp := "feedback-validation"
+	cmd := createTestCommand()
+	replies := cmd.feedbackMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestFeedback_TooLong(t *testing.T) {
+	// Create a message longer than 1000 characters
+	longMessage := ""
+	for i := 0; i < 1001; i++ {
+		longMessage += "a"
+	}
+	
+	exp := "feedback-too-long"
+	cmd := createTestCommand()
+	cmd.args = longMessage
+	replies := cmd.feedbackMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestFeedback_Success(t *testing.T) {
+	exp := "feedback-success"
+	cmd := createTestCommand()
+	cmd.args = "This is test feedback"
+	cmd.userID = 12345
+	cmd.adminID = 99999
+
+	replies := cmd.feedbackMulti()
+	// First reply is to admin, second is to user
+	if replies[0].ChatID != 99999 {
+		t.Errorf("Expected ChatID 99999, got %d", replies[0].ChatID)
+	}
+	// Check that admin receives the feedback-message template
+	if replies[0].Text != "feedback-message" {
+		t.Errorf("Expected feedback-message template, got '%s'", replies[0].Text)
+	}
+	assertReplyTemplate(t, replies[1], exp)
+}
+
+func TestFeedback_EmptyString(t *testing.T) {
+	exp := "feedback-validation"
+	cmd := createTestCommand()
+	cmd.args = ""
+	replies := cmd.feedbackMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestFeedback_WhitespaceOnly(t *testing.T) {
+	exp := "feedback-validation"
+	cmd := createTestCommand()
+	cmd.args = "   "
+	replies := cmd.feedbackMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+// Notify command tests
+func TestNotify_NonAdmin(t *testing.T) {
+	exp := "cmd-unknown"
+	cmd := createTestCommand()
+	cmd.admin = false
+	cmd.args = "Test notification"
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestNotify_NoArgs(t *testing.T) {
+	exp := "notify-validation"
+	cmd := createTestCommand()
+	cmd.admin = true
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestNotify_TooLong(t *testing.T) {
+	// Create a message longer than 2000 characters
+	longMessage := ""
+	for i := 0; i < 2001; i++ {
+		longMessage += "a"
+	}
+	
+	exp := "notify-too-long"
+	cmd := createTestCommand()
+	cmd.admin = true
+	cmd.args = longMessage
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestNotify_ErrorOnGetUsers(t *testing.T) {
+	exp := "notify-error"
+	db = &dbMock{
+		getAllUsersMock: func() ([]int64, error) {
+			return nil, errors.New("database error")
+		},
+	}
+
+	cmd := createTestCommand()
+	cmd.admin = true
+	cmd.args = "Test notification"
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[len(replies)-1], exp)
+}
+
+func TestNotify_Success(t *testing.T) {
+	exp := "notify-success"
+	userIDs := []int64{123, 456, 789}
+	db = &dbMock{
+		getAllUsersMock: func() ([]int64, error) {
+			return userIDs, nil
+		},
+	}
+
+	cmd := createTestCommand()
+	cmd.admin = true
+	cmd.args = "Test notification"
+
+	replies := cmd.notifyMulti()
+	// The last reply is the summary to the admin
+	assertReplyTemplate(t, replies[len(replies)-1], exp)
+	// The rest should be notifications to users
+	for i, userID := range userIDs {
+		reply := replies[i]
+		if reply.ChatID != userID {
+			t.Errorf("Expected ChatID %d, got %d", userID, reply.ChatID)
+		}
+		// Check that users receive the notify-message template
+		if reply.Text != "notify-message" {
+			t.Errorf("Expected notify-message template, got '%s'", reply.Text)
+		}
+	}
+}
+
+func TestNotify_EmptyUsers(t *testing.T) {
+	exp := "notify-success"
+	db = &dbMock{
+		getAllUsersMock: func() ([]int64, error) {
+			return []int64{}, nil
+		},
+	}
+
+	cmd := createTestCommand()
+	cmd.admin = true
+	cmd.args = "Test notification"
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestNotify_EmptyString(t *testing.T) {
+	exp := "notify-validation"
+	cmd := createTestCommand()
+	cmd.admin = true
+	cmd.args = ""
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
+func TestNotify_WhitespaceOnly(t *testing.T) {
+	exp := "notify-validation"
+	cmd := createTestCommand()
+	cmd.admin = true
+	cmd.args = "   "
+	replies := cmd.notifyMulti()
+	assertReplyTemplate(t, replies[0], exp)
+}
+
 func assertError(t *testing.T, resp string, err error, exp error) {
 	if err != exp {
 		t.Errorf("Expected error '%s', but was '%s'", exp, err)
@@ -220,12 +387,24 @@ func assertTemplate(t *testing.T, resp string, exp string, err error) {
 	}
 }
 
+func assertReplyTemplate(t *testing.T, reply Reply, exp string) {
+	if reply.Text != exp {
+		t.Errorf("Expected reply template '%s', got '%s'", exp, reply.Text)
+	}
+}
+
 func setup() {
 	custom := func(lang string, name string, data interface{}) (string, error) {
 		return name, nil
 	}
 
 	templates.SetCustomOutput(custom)
+}
+
+func createTestCommand() *Command {
+	return &Command{
+		replyQueue: make(chan Reply, 10),
+	}
 }
 
 type dbMock struct {
@@ -241,6 +420,7 @@ type dbMock struct {
 	getFeedsMock              func() ([]database.Feed, error)
 	resetFeedMock             func() error
 	getFeedUsersMock          func() ([]database.UserFeed, error)
+	getAllUsersMock           func() ([]int64, error)
 	setFeedUpdatedMock        func() error
 	setFeedLastPubMock        func() error
 	setFeedBrokenMock         func() error
@@ -264,7 +444,8 @@ func (db *dbMock) GetUserNormalizedFeed(userID int64, normalized string) (*datab
 func (db *dbMock) GetFeed(uri string) (*database.Feed, error)           { return db.getFeedMock() }
 func (db *dbMock) GetFeeds(count int) ([]database.Feed, error)          { return db.getFeedsMock() }
 func (db *dbMock) GetFeedUsers(feedID int) ([]database.UserFeed, error) { return db.getFeedUsersMock() }
+func (db *dbMock) GetAllUsers() ([]int64, error)                        { return db.getAllUsersMock() }
 func (db *dbMock) ResetFeed(feedID int) error                           { return db.resetFeedMock() }
 func (db *dbMock) SetFeedUpdated(id int) error                          { return db.setFeedUpdatedMock() }
-func (db *dbMock) SetFeedLastPub(id int, lastPub time.Time) error       { return db.setFeedLastPubMock() }
+func (db *dbMock) SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error { return db.setFeedLastPubMock() }
 func (db *dbMock) SetFeedBroken(id int) error                           { return db.setFeedBrokenMock() }

@@ -15,6 +15,7 @@ type Feed struct {
 	Updated    *time.Time
 	Healthy    bool
 	LastPub    *time.Time
+	LastPubURI string
 }
 
 // UserFeed represents user subscription to the feed
@@ -85,7 +86,7 @@ func (db *Postgres) DeleteUser(userID int64) error {
 func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
@@ -101,7 +102,7 @@ func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 
 // GetUserURIFeed get user subscription by its uri (unique)
 func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
 	LIMIT 1`
@@ -112,7 +113,7 @@ func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 
 // GetUserNormalizedFeed get user subscription by its normalized name
 func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
 	LIMIT 1`
@@ -123,7 +124,7 @@ func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Fee
 
 // GetFeed get feed record by its uri (unique)
 func (db *Postgres) GetFeed(uri string) (*Feed, error) {
-	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub
+	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub, last_pub_uri
 	FROM feeds
 	WHERE uri = $1
 	LIMIT 1`
@@ -137,7 +138,7 @@ func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	var feeds []Feed
 
 	// Get healthy or unhealthy for last day
-	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub
+	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri
 	FROM feeds f
 	INNER JOIN userfeeds uf ON uf.feed_id = f.id 
 	WHERE f.healthy = TRUE OR f.updated < current_date
@@ -158,6 +159,7 @@ func (db *Postgres) ResetFeed(feedID int) error {
 	query := `UPDATE feeds 
 	SET updated = CURRENT_TIMESTAMP,
 	last_pub = current_timestamp,
+	last_pub_uri = NULL,
 	healthy = TRUE
 	WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM userfeeds WHERE feed_id = $1)`
 	_, err := db.Pool.Exec(db.Context, query, feedID)
@@ -197,15 +199,16 @@ func (db *Postgres) SetFeedUpdated(id int) error {
 	return err
 }
 
-// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date
-func (db *Postgres) SetFeedLastPub(id int, lastPub time.Time) error {
+// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date and URI
+func (db *Postgres) SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error {
 	query := `UPDATE feeds
 	SET updated = $1,
 	healthy = TRUE,
-	last_pub = $2
-	WHERE id = $3`
+	last_pub = $2,
+	last_pub_uri = $3
+	WHERE id = $4`
 
-	_, err := db.Pool.Exec(db.Context, query, time.Now(), lastPub, id)
+	_, err := db.Pool.Exec(db.Context, query, time.Now(), lastPub, lastPubURI, id)
 	return err
 }
 
@@ -220,6 +223,28 @@ func (db *Postgres) SetFeedBroken(id int) error {
 	return err
 }
 
+// GetAllUsers returns all unique user IDs who have subscribed to feeds
+func (db *Postgres) GetAllUsers() ([]int64, error) {
+	query := `SELECT DISTINCT user_id FROM userfeeds`
+	rows, err := db.Pool.Query(db.Context, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []int64
+	for rows.Next() {
+		var userID int64
+		err = rows.Scan(&userID)
+		if err != nil {
+			return users, err
+		}
+		users = append(users, userID)
+	}
+
+	return users, nil
+}
+
 func toFeed(row pgx.Row) (*Feed, error) {
 	var id int
 	var name string
@@ -228,8 +253,9 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var updated *time.Time
 	var healthy bool
 	var lastPub *time.Time
+	var lastPubURI string
 
-	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &lastPub); err == nil {
+	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &lastPub, &lastPubURI); err == nil {
 		return &Feed{
 			ID:         id,
 			Name:       name,
@@ -238,6 +264,7 @@ func toFeed(row pgx.Row) (*Feed, error) {
 			Updated:    updated,
 			Healthy:    healthy,
 			LastPub:    lastPub,
+			LastPubURI: lastPubURI,
 		}, err
 	} else if err == pgx.ErrNoRows {
 		return nil, nil

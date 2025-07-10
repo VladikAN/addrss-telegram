@@ -54,14 +54,17 @@ type Database interface {
 	// GetFeedUsers returns active feed subscriptions
 	GetFeedUsers(feedID int) ([]UserFeed, error)
 
+	// GetAllUsers returns all unique user IDs who have subscribed to feeds
+	GetAllUsers() ([]int64, error)
+
 	// ResetFeed updates feed dates to prevent spam to first subscription after some time
 	ResetFeed(feedID int) error
 
 	// SetFeedUpdated update feed by new timespan and set healthy to true
 	SetFeedUpdated(id int) error
 
-	// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date
-	SetFeedLastPub(id int, lastPub time.Time) error
+	// SetFeedLastPub update feed by new timespan, set healthy to true and set last publication date and URI
+	SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error
 
 	// SetFeedBroken update feed by setting healthy to false
 	SetFeedBroken(id int) error

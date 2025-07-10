@@ -98,9 +98,11 @@ func handleRequests(updates tgbotapi.UpdatesChannel, replyQueue chan Reply, opt 
 			continue
 		}
 
-		cmd := newCommand(msg, opt)
-		txt := cmd.run()
-		replyQueue <- Reply{ChatID: msg.Chat.ID, Text: txt}
+		cmd := newCommand(msg, opt, replyQueue)
+		replies := cmd.run()
+		for _, reply := range replies {
+			replyQueue <- reply
+		}
 	}
 
 	log.Print("INFO Updates channel was closed")

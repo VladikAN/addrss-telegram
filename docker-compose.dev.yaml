@@ -10,4 +10,5 @@ services:
       build: .
       environment:
         - AR_TOKEN
+        - AR_BOT_ADMIN
         - AR_DATABASE=postgres://admin:admin@postgres/feed

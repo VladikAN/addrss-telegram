@@ -67,9 +67,10 @@ func (rd *Reader) readFeeds() error {
 	}
 
 	stats := struct {
-		updated  int
-		notified int
-		feeds    int
+		updated    int
+		notified   int
+		feeds      int
+		duplicates int
 	}{}
 
 	// Read feeds from servers
@@ -81,22 +82,36 @@ func (rd *Reader) readFeeds() error {
 		}
 
 		if len(updates) > 0 {
-			users, err := rd.DB.GetFeedUsers(feed.ID)
-			if err != nil {
-				return fmt.Errorf("feed '%s' unable get subscriptions: %s", feed.Normalized, err)
+			// Filter out already processed articles by URI
+			var newUpdates []parser.Topic
+			for _, update := range updates {
+				// Skip if this is the same URI as the last processed post
+				if feed.LastPubURI != "" && feed.LastPubURI == update.URI {
+					stats.duplicates++
+					continue
+				}
+				newUpdates = append(newUpdates, update)
 			}
 
-			stats.updated += len(updates)
-			stats.notified += len(users)
-			stats.feeds++
-			if len(users) > 0 {
-				rd.sendUpdates(updates, users)
-			}
+			if len(newUpdates) > 0 {
+				users, err := rd.DB.GetFeedUsers(feed.ID)
+				if err != nil {
+					return fmt.Errorf("feed '%s' unable get subscriptions: %s", feed.Normalized, err)
+				}
 
-			last := parser.GetLast(updates)
-			err = rd.DB.SetFeedLastPub(feed.ID, *last.Date)
-			if err != nil {
-				return fmt.Errorf("feed '%s' unable update publish date: %s", feed.Normalized, err)
+				stats.updated += len(newUpdates)
+				stats.notified += len(users)
+				stats.feeds++
+				if len(users) > 0 {
+					rd.sendUpdates(newUpdates, users)
+				}
+
+				// Update last publication date and URI to the latest processed article
+				last := parser.GetLast(newUpdates)
+				err = rd.DB.SetFeedLastPub(feed.ID, *last.Date, last.URI)
+				if err != nil {
+					return fmt.Errorf("feed '%s' unable update last pub date and URI: %s", feed.Normalized, err)
+				}
 			}
 
 			continue
@@ -109,7 +124,7 @@ func (rd *Reader) readFeeds() error {
 	}
 
 	if stats.updated > 0 {
-		log.Printf("DEBUG Reader found %d new post(s) for %d feed(s) and notified %d subscription(s)", stats.updated, stats.feeds, stats.notified)
+		log.Printf("DEBUG Reader found %d new post(s) for %d feed(s) and notified %d subscription(s) (skipped %d duplicates)", stats.updated, stats.feeds, stats.notified, stats.duplicates)
 	}
 
 	log.Printf("DEBUG Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
