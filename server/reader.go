@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/go-pkgz/lgr"
@@ -77,8 +76,9 @@ func (rd *Reader) readFeeds() error {
 	for _, feed := range feeds {
 		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
 		if err != nil {
+			log.Printf("ERROR Feed '%s' unable get updates: %s", feed.Normalized, err)
 			rd.DB.SetFeedBroken(feed.ID)
-			return fmt.Errorf("feed '%s' unable get updates: %s", feed.Normalized, err)
+			continue
 		}
 
 		if len(updates) > 0 {
@@ -96,7 +96,8 @@ func (rd *Reader) readFeeds() error {
 			if len(newUpdates) > 0 {
 				users, err := rd.DB.GetFeedUsers(feed.ID)
 				if err != nil {
-					return fmt.Errorf("feed '%s' unable get subscriptions: %s", feed.Normalized, err)
+					log.Printf("ERROR Feed '%s' unable get subscriptions: %s", feed.Normalized, err)
+					continue
 				}
 
 				stats.updated += len(newUpdates)
@@ -110,7 +111,8 @@ func (rd *Reader) readFeeds() error {
 				last := parser.GetLast(newUpdates)
 				err = rd.DB.SetFeedLastPub(feed.ID, *last.Date, last.URI)
 				if err != nil {
-					return fmt.Errorf("feed '%s' unable update last pub date and URI: %s", feed.Normalized, err)
+					log.Printf("ERROR Feed '%s' unable update last pub date and URI: %s", feed.Normalized, err)
+					continue
 				}
 			}
 
@@ -119,7 +121,8 @@ func (rd *Reader) readFeeds() error {
 
 		err = rd.DB.SetFeedUpdated(feed.ID)
 		if err != nil {
-			return fmt.Errorf("feed '%s' unable mark as updated: %s", feed.Normalized, err)
+			log.Printf("ERROR Feed '%s' unable mark as updated: %s", feed.Normalized, err)
+			continue
 		}
 	}
 
