@@ -1,5 +1,7 @@
 Active subscriptions:
 {{range .}}
-* <b>{{.Name}}</b>
+* {{if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
+  {{if .LastPub}}Last published: {{.LastPub.Format "2006-01-02 15:04"}}{{end}}
+  {{if .Updated}}Last checked: {{.Updated.Format "2006-01-02 15:04"}}{{end}}
 Type /remove {{.Normalized}} - to unsubscribe from feed.
 {{end}}
