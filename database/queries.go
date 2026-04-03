@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -159,7 +160,7 @@ func (db *Postgres) ResetFeed(feedID int) error {
 	query := `UPDATE feeds 
 	SET updated = CURRENT_TIMESTAMP,
 	last_pub = current_timestamp,
-	last_pub_uri = NULL,
+	last_pub_uri = '',
 	healthy = TRUE
 	WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM userfeeds WHERE feed_id = $1)`
 	_, err := db.Pool.Exec(db.Context, query, feedID)
@@ -253,7 +254,7 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var updated *time.Time
 	var healthy bool
 	var lastPub *time.Time
-	var lastPubURI string
+	var lastPubURI sql.NullString
 
 	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &lastPub, &lastPubURI); err == nil {
 		return &Feed{
@@ -264,7 +265,7 @@ func toFeed(row pgx.Row) (*Feed, error) {
 			Updated:    updated,
 			Healthy:    healthy,
 			LastPub:    lastPub,
-			LastPubURI: lastPubURI,
+			LastPubURI: lastPubURI.String,
 		}, err
 	} else if err == pgx.ErrNoRows {
 		return nil, nil
