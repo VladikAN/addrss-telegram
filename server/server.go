@@ -21,6 +21,7 @@ type Options struct {
 	ReaderInterval int
 	ReaderFeeds    int
 	BotAdmin       int64
+	HTTPPort       int
 }
 
 // Reply is a message to be sent to user/chat
