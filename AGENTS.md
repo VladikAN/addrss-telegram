@@ -3,7 +3,7 @@
 ## Cursor Cloud specific instructions
 
 ### Overview
-AddRss is a Telegram bot for RSS/ATOM feed reading, written in Go. It requires PostgreSQL and a Telegram bot API token (`AR_TOKEN`).
+AddRss is a Telegram bot for RSS/ATOM feed reading, written in Go. For local development, use `--local` mode (HTTP server, no Telegram token needed). Production mode requires `AR_TOKEN`.
 
 ### Go version
 This project requires **Go 1.26**. The binary is installed at `/usr/local/go/bin/go`. Ensure `PATH` includes `/usr/local/go/bin` (the update script handles this).
@@ -53,6 +53,12 @@ Without a valid `AR_TOKEN`, Telegram mode will panic at startup.
 
 ### Key environment variables
 See `README.md` for the full list. Defaults connect to `postgres://admin:admin@localhost:5432/feed`.
+
+### Startup order
+1. Start PostgreSQL: `sudo pg_ctlcluster 16 main start`
+2. Run the app: `go run . --local --debug`
+
+PostgreSQL must be running before the app starts. The app will panic if it cannot connect to the database.
 
 ### Docker
 Docker is not installed in the Cloud Agent VM. Use `go run .` or the built binary directly with the local PostgreSQL instance for development.
