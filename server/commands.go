@@ -20,6 +20,7 @@ type Command struct {
 	args       string
 	fileId     string
 	lang       string
+	text       string
 	raw        *tgbotapi.Message
 	replyQueue chan Reply
 }
@@ -34,6 +35,7 @@ func newCommand(msg *tgbotapi.Message, opt *Options, replyQueue chan Reply) *Com
 		verb:       msg.CommandWithAt(),
 		args:       msg.CommandArguments(),
 		lang:       msg.From.LanguageCode,
+		text:       msg.Text,
 		raw:        msg,
 		replyQueue: replyQueue,
 	}
@@ -45,8 +47,42 @@ func newCommand(msg *tgbotapi.Message, opt *Options, replyQueue chan Reply) *Com
 	return cmd
 }
 
+func newLocalCommand(userID int64, text string, opt *Options) *Command {
+	verb, args := parseCommandText(text)
+	return &Command{
+		userID:  userID,
+		admin:   userID == opt.BotAdmin,
+		adminID: opt.BotAdmin,
+		verb:    verb,
+		args:    args,
+		lang:    "en",
+		text:    text,
+	}
+}
+
+func parseCommandText(text string) (string, string) {
+	text = strings.TrimSpace(text)
+	if len(text) == 0 || text[0] != '/' {
+		return "", text
+	}
+
+	parts := strings.SplitN(text, " ", 2)
+	verb := strings.TrimPrefix(parts[0], "/")
+
+	if at := strings.Index(verb, "@"); at >= 0 {
+		verb = verb[:at]
+	}
+
+	args := ""
+	if len(parts) > 1 {
+		args = parts[1]
+	}
+
+	return verb, args
+}
+
 func (cmd *Command) run() []Reply {
-	log.Printf("DEBUG request: %s", cmd.raw.Text)
+	log.Printf("DEBUG request: %s", cmd.text)
 
 	var replies []Reply
 	var response string
@@ -69,7 +105,7 @@ func (cmd *Command) run() []Reply {
 		case "add":
 			response, err = cmd.add()
 		case "import":
-			response, err = cmd.importOpml() // simply call for validation message
+			response, err = cmd.importOpml()
 		case "remove":
 			response, err = cmd.remove()
 		case "list":
@@ -86,12 +122,12 @@ func (cmd *Command) run() []Reply {
 	}
 
 	if err != nil {
-		log.Printf("ERROR user %d command '%s' completed with error: '%s'", cmd.userID, cmd.raw.Text, err)
+		log.Printf("ERROR user %d command '%s' completed with error: '%s'", cmd.userID, cmd.text, err)
 		response, _ = templates.ToText(cmd.lang, "cmd-error")
 	}
 
 	if len(response) == 0 {
-		log.Printf("WARN command '%s' is unknown", cmd.raw.Text)
+		log.Printf("WARN command '%s' is unknown", cmd.text)
 		response, _ = templates.ToText(cmd.lang, "cmd-unknown")
 	}
 

@@ -367,6 +367,72 @@ func TestNotify_WhitespaceOnly(t *testing.T) {
 	assertReplyTemplate(t, replies[0], exp)
 }
 
+func TestParseCommandText_Simple(t *testing.T) {
+	verb, args := parseCommandText("/help")
+	if verb != "help" {
+		t.Errorf("Expected verb 'help', got '%s'", verb)
+	}
+	if args != "" {
+		t.Errorf("Expected empty args, got '%s'", args)
+	}
+}
+
+func TestParseCommandText_WithArgs(t *testing.T) {
+	verb, args := parseCommandText("/add https://example.com/rss")
+	if verb != "add" {
+		t.Errorf("Expected verb 'add', got '%s'", verb)
+	}
+	if args != "https://example.com/rss" {
+		t.Errorf("Expected args 'https://example.com/rss', got '%s'", args)
+	}
+}
+
+func TestParseCommandText_WithAt(t *testing.T) {
+	verb, _ := parseCommandText("/help@botname")
+	if verb != "help" {
+		t.Errorf("Expected verb 'help', got '%s'", verb)
+	}
+}
+
+func TestParseCommandText_Empty(t *testing.T) {
+	verb, args := parseCommandText("")
+	if verb != "" {
+		t.Errorf("Expected empty verb, got '%s'", verb)
+	}
+	if args != "" {
+		t.Errorf("Expected empty args, got '%s'", args)
+	}
+}
+
+func TestParseCommandText_NoSlash(t *testing.T) {
+	verb, args := parseCommandText("just text")
+	if verb != "" {
+		t.Errorf("Expected empty verb, got '%s'", verb)
+	}
+	if args != "just text" {
+		t.Errorf("Expected 'just text', got '%s'", args)
+	}
+}
+
+func TestNewLocalCommand_Admin(t *testing.T) {
+	opt := &Options{BotAdmin: 42}
+	cmd := newLocalCommand(42, "/stats", opt)
+	if !cmd.admin {
+		t.Error("Expected admin to be true")
+	}
+	if cmd.verb != "stats" {
+		t.Errorf("Expected verb 'stats', got '%s'", cmd.verb)
+	}
+}
+
+func TestNewLocalCommand_NonAdmin(t *testing.T) {
+	opt := &Options{BotAdmin: 42}
+	cmd := newLocalCommand(1, "/help", opt)
+	if cmd.admin {
+		t.Error("Expected admin to be false")
+	}
+}
+
 func assertError(t *testing.T, resp string, err error, exp error) {
 	if err != exp {
 		t.Errorf("Expected error '%s', but was '%s'", exp, err)
