@@ -53,6 +53,12 @@ func TestHelp(t *testing.T) {
 	assertTemplate(t, r, exp, err)
 }
 
+func TestPing(t *testing.T) {
+	exp := "ping-success"
+	r, err := (&Command{}).ping()
+	assertTemplate(t, r, exp, err)
+}
+
 func TestAdd_NoArgs(t *testing.T) {
 	exp := "add-validation"
 	r, err := (&Command{}).add()
