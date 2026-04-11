@@ -6,4 +6,6 @@ And /remove [name] to remove the subscription from the list.
 
 Also you can use /import or just upload OPML file from any other feed reader to import all feeds at once.
 
+Use /ping to check if the bot is online.
+
 Use /feedback [message] to send feedback to the bot administrator.

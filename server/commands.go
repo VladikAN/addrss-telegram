@@ -102,6 +102,8 @@ func (cmd *Command) run() []Reply {
 			response, err = cmd.start()
 		case "help":
 			response, err = cmd.help()
+		case "ping":
+			response, err = cmd.ping()
 		case "add":
 			response, err = cmd.add()
 		case "import":
@@ -153,6 +155,10 @@ func (cmd *Command) start() (string, error) {
 
 func (cmd *Command) help() (string, error) {
 	return templates.ToText(cmd.lang, "help-success")
+}
+
+func (cmd *Command) ping() (string, error) {
+	return templates.ToText(cmd.lang, "ping-success")
 }
 
 func (cmd *Command) add() (string, error) {
