@@ -76,7 +76,7 @@ func (rd *Reader) readFeeds() error {
 	for _, feed := range feeds {
 		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
 		if err != nil {
-			log.Printf("ERROR Feed '%s' unable get updates: %s", feed.Normalized, err)
+			log.Printf("WARN Feed '%s' unable get updates: %s", feed.Normalized, err)
 			rd.DB.SetFeedBroken(feed.ID)
 			continue
 		}
