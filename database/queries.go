@@ -28,17 +28,24 @@ type UserFeed struct {
 
 // Stats represents basic service statistics
 type Stats struct {
-	Users int
-	Feeds int
+	Users   int
+	Blocked int
+	Feeds   int
 }
 
-// GetStats gets total number of users and feeds
+// GetStats gets total number of users, blocked users and feeds
 func (db *Postgres) GetStats() (*Stats, error) {
 	result := &Stats{}
 
 	usersQuery := `SELECT COUNT(DISTINCT user_id) from userFeeds`
 	usersRow := db.Pool.QueryRow(db.Context, usersQuery)
 	if err := usersRow.Scan(&result.Users); err != nil {
+		return nil, err
+	}
+
+	blockedQuery := `SELECT COUNT(*) FROM users WHERE blocked = TRUE`
+	blockedRow := db.Pool.QueryRow(db.Context, blockedQuery)
+	if err := blockedRow.Scan(&result.Blocked); err != nil {
 		return nil, err
 	}
 
@@ -64,6 +71,10 @@ func (db *Postgres) AddFeed(name string, normalized string, uri string) (*Feed, 
 
 // Subscribe bind relation between user and feed
 func (db *Postgres) Subscribe(userID int64, feedID int) error {
+	if err := db.EnsureUser(userID); err != nil {
+		return err
+	}
+
 	query := `INSERT INTO userfeeds (user_id, feed_id) VALUES ($1, $2) ON CONFLICT (user_id, feed_id) DO NOTHING`
 	_, err := db.Pool.Exec(db.Context, query, userID, feedID)
 	return err
@@ -79,6 +90,28 @@ func (db *Postgres) Unsubscribe(userID int64, feedID int) error {
 // DeleteUser will delete all user records
 func (db *Postgres) DeleteUser(userID int64) error {
 	query := `DELETE FROM userfeeds WHERE user_id = $1`
+	_, err := db.Pool.Exec(db.Context, query, userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Pool.Exec(db.Context, `DELETE FROM users WHERE user_id = $1`, userID)
+	return err
+}
+
+// EnsureUser creates a user row if missing and clears the blocked flag.
+// Call this when the user sends any inbound message (they can talk to the bot again).
+func (db *Postgres) EnsureUser(userID int64) error {
+	query := `INSERT INTO users (user_id, blocked, blocked_at) VALUES ($1, FALSE, NULL)
+	ON CONFLICT (user_id) DO UPDATE SET blocked = FALSE, blocked_at = NULL`
+	_, err := db.Pool.Exec(db.Context, query, userID)
+	return err
+}
+
+// SetUserBlocked marks the user as blocked so delivery attempts stop.
+func (db *Postgres) SetUserBlocked(userID int64) error {
+	query := `INSERT INTO users (user_id, blocked, blocked_at) VALUES ($1, TRUE, CURRENT_TIMESTAMP)
+	ON CONFLICT (user_id) DO UPDATE SET blocked = TRUE, blocked_at = CURRENT_TIMESTAMP`
 	_, err := db.Pool.Exec(db.Context, query, userID)
 	return err
 }
@@ -167,9 +200,12 @@ func (db *Postgres) ResetFeed(feedID int) error {
 	return err
 }
 
-// GetFeedUsers returns active feed subscriptions
+// GetFeedUsers returns active (non-blocked) feed subscriptions
 func (db *Postgres) GetFeedUsers(feedID int) ([]UserFeed, error) {
-	query := `SELECT user_id, added FROM userfeeds WHERE feed_id = $1`
+	query := `SELECT uf.user_id, uf.added
+	FROM userfeeds uf
+	LEFT JOIN users u ON u.user_id = uf.user_id
+	WHERE uf.feed_id = $1 AND COALESCE(u.blocked, FALSE) = FALSE`
 	rows, err := db.Pool.Query(db.Context, query, &feedID)
 	if err != nil {
 		return nil, err
@@ -224,9 +260,12 @@ func (db *Postgres) SetFeedBroken(id int) error {
 	return err
 }
 
-// GetAllUsers returns all unique user IDs who have subscribed to feeds
+// GetAllUsers returns unique non-blocked user IDs who have subscribed to feeds
 func (db *Postgres) GetAllUsers() ([]int64, error) {
-	query := `SELECT DISTINCT user_id FROM userfeeds`
+	query := `SELECT DISTINCT uf.user_id
+	FROM userfeeds uf
+	LEFT JOIN users u ON u.user_id = uf.user_id
+	WHERE COALESCE(u.blocked, FALSE) = FALSE`
 	rows, err := db.Pool.Query(db.Context, query)
 	if err != nil {
 		return nil, err

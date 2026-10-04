@@ -9,6 +9,14 @@ CREATE TABLE feeds(
   last_pub_uri VARCHAR(1024) DEFAULT ''
 );
 
+-- Users known to the bot. blocked=true means Telegram rejected delivery
+-- (user blocked the bot or deleted the account); stop sending until they return.
+CREATE TABLE users(
+    user_id BIGINT PRIMARY KEY,
+    blocked BOOLEAN NOT NULL DEFAULT FALSE,
+    blocked_at TIMESTAMPTZ
+);
+
 CREATE TABLE userfeeds(
     user_id BIGINT NOT NULL,
     feed_id INTEGER NOT NULL,

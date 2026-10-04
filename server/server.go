@@ -115,9 +115,12 @@ func handleReply(queue chan Reply) {
 		rsp.ParseMode = "HTML"
 
 		if _, err := bot.Send(rsp); err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "forbidden") {
-				db.DeleteUser(msg.ChatID)
-				log.Printf("WARN user %d is blocked the bot and now deleted", msg.ChatID)
+			if isDeliveryForbidden(err) {
+				if markErr := db.SetUserBlocked(msg.ChatID); markErr != nil {
+					log.Printf("ERROR failed to mark user %d as blocked: %s", msg.ChatID, markErr)
+				} else {
+					log.Printf("WARN user %d blocked the bot (or account deactivated); delivery stopped", msg.ChatID)
+				}
 				continue
 			}
 
@@ -126,4 +129,21 @@ func handleReply(queue chan Reply) {
 	}
 
 	log.Print("INFO Reply queue channel was closed")
+}
+
+// isDeliveryForbidden detects Telegram errors that mean we must stop messaging the user.
+// Official Bot API returns HTTP 403 with descriptions such as:
+//   - "Forbidden: bot was blocked by the user"
+//   - "Forbidden: user is deactivated"
+// There is no API to query block status ahead of time; the failed send is the signal.
+// See https://core.telegram.org/bots/api#making-requests and Update.my_chat_member.
+func isDeliveryForbidden(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "blocked by the user") ||
+		strings.Contains(msg, "user is deactivated") ||
+		strings.Contains(msg, "forbidden")
 }
