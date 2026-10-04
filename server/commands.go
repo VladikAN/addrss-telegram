@@ -84,6 +84,11 @@ func parseCommandText(text string) (string, string) {
 func (cmd *Command) run() []Reply {
 	log.Printf("DEBUG request: %s", cmd.text)
 
+	// Inbound activity means the user can talk to the bot again — clear blocked flag.
+	if err := db.EnsureUser(cmd.userID); err != nil {
+		log.Printf("ERROR failed to ensure user %d: %s", cmd.userID, err)
+	}
+
 	var replies []Reply
 	var response string
 	var err error

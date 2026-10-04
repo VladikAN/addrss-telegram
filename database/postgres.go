@@ -36,6 +36,12 @@ type Database interface {
 	// DeleteUser will delete all user records
 	DeleteUser(userID int64) error
 
+	// EnsureUser creates a user row if missing and clears the blocked flag
+	EnsureUser(userID int64) error
+
+	// SetUserBlocked marks the user as blocked so the bot stops sending messages
+	SetUserBlocked(userID int64) error
+
 	// GetUserFeeds gets user subscriptions
 	GetUserFeeds(userID int64) ([]Feed, error)
 
