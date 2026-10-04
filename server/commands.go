@@ -32,7 +32,7 @@ func newCommand(msg *tgbotapi.Message, opt *Options, replyQueue chan Reply) *Com
 		userID:     msg.Chat.ID,
 		admin:      msg.Chat.ID == opt.BotAdmin,
 		adminID:    opt.BotAdmin,
-		verb:       msg.CommandWithAt(),
+		verb:       msg.Command(),
 		args:       msg.CommandArguments(),
 		lang:       msg.From.LanguageCode,
 		text:       msg.Text,
