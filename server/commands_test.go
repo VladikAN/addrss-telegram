@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/templates"
 )
@@ -417,6 +418,26 @@ func TestParseCommandText_NoSlash(t *testing.T) {
 	}
 	if args != "just text" {
 		t.Errorf("Expected 'just text', got '%s'", args)
+	}
+}
+
+func TestNewCommand_StripsBotSuffixFromVerb(t *testing.T) {
+	text := "/ping@mybot"
+	entities := &[]tgbotapi.MessageEntity{{Type: "bot_command", Offset: 0, Length: len(text)}}
+	msg := &tgbotapi.Message{
+		Text:     text,
+		Entities: entities,
+		Chat:     &tgbotapi.Chat{ID: 1},
+		From:     &tgbotapi.User{LanguageCode: "en"},
+	}
+	opt := &Options{}
+	cmd := newCommand(msg, opt, make(chan Reply, 1))
+	replies := cmd.run()
+	if len(replies) != 1 {
+		t.Fatalf("Expected 1 reply, got %d", len(replies))
+	}
+	if replies[0].Text != "ping-success" {
+		t.Errorf("Expected ping-success, got '%s'", replies[0].Text)
 	}
 }
 
