@@ -489,13 +489,16 @@ type dbMock struct {
 	getUserURIFeedMock        func() (*database.Feed, error)
 	getUserNormalizedFeedMock func() (*database.Feed, error)
 	getFeedMock               func() (*database.Feed, error)
+	getFeedByIDMock           func() (*database.Feed, error)
 	getFeedsMock              func() ([]database.Feed, error)
+	getFeedsPageMock          func() ([]database.Feed, int, error)
 	resetFeedMock             func() error
 	getFeedUsersMock          func() ([]database.UserFeed, error)
 	getAllUsersMock           func() ([]int64, error)
 	setFeedUpdatedMock        func() error
 	setFeedLastPubMock        func() error
 	setFeedBrokenMock         func() error
+	setFeedBlockedMock        func() error
 }
 
 func (db *dbMock) Close()                             {}
@@ -513,11 +516,18 @@ func (db *dbMock) GetUserURIFeed(userID int64, uri string) (*database.Feed, erro
 func (db *dbMock) GetUserNormalizedFeed(userID int64, normalized string) (*database.Feed, error) {
 	return db.getUserNormalizedFeedMock()
 }
-func (db *dbMock) GetFeed(uri string) (*database.Feed, error)           { return db.getFeedMock() }
-func (db *dbMock) GetFeeds(count int) ([]database.Feed, error)          { return db.getFeedsMock() }
+func (db *dbMock) GetFeed(uri string) (*database.Feed, error)  { return db.getFeedMock() }
+func (db *dbMock) GetFeedByID(id int) (*database.Feed, error)  { return db.getFeedByIDMock() }
+func (db *dbMock) GetFeeds(count int) ([]database.Feed, error) { return db.getFeedsMock() }
+func (db *dbMock) GetFeedsPage(offset int, limit int) ([]database.Feed, int, error) {
+	return db.getFeedsPageMock()
+}
 func (db *dbMock) GetFeedUsers(feedID int) ([]database.UserFeed, error) { return db.getFeedUsersMock() }
 func (db *dbMock) GetAllUsers() ([]int64, error)                        { return db.getAllUsersMock() }
 func (db *dbMock) ResetFeed(feedID int) error                           { return db.resetFeedMock() }
 func (db *dbMock) SetFeedUpdated(id int) error                          { return db.setFeedUpdatedMock() }
-func (db *dbMock) SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error { return db.setFeedLastPubMock() }
-func (db *dbMock) SetFeedBroken(id int) error                           { return db.setFeedBrokenMock() }
+func (db *dbMock) SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error {
+	return db.setFeedLastPubMock()
+}
+func (db *dbMock) SetFeedBroken(id int) error                    { return db.setFeedBrokenMock() }
+func (db *dbMock) SetFeedBlocked(id int, blocked bool) error     { return db.setFeedBlockedMock() }

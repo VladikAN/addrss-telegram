@@ -51,8 +51,27 @@ AR_TOKEN=<token> AR_DATABASE="postgres://admin:admin@localhost:5432/feed" go run
 ```
 Without a valid `AR_TOKEN`, Telegram mode will panic at startup.
 
+### Feed validation API
+Token-protected HTTP API for reviewing and blocking feeds. Requires `AR_API_TOKEN`.
+Available in `--local` mode and in Telegram mode when `AR_API_TOKEN` is set (listens on `AR_HTTP_PORT`).
+
+List feeds (pagination via `offset` and `limit`):
+```
+curl -H "X-API-Token: $AR_API_TOKEN" "http://localhost:8080/api/feeds?offset=0&limit=20"
+```
+Also accepts `Authorization: Bearer <token>`.
+
+Block / unblock a feed:
+```
+curl -X POST -H "X-API-Token: $AR_API_TOKEN" http://localhost:8080/api/feeds/1/block
+curl -X POST -H "X-API-Token: $AR_API_TOKEN" http://localhost:8080/api/feeds/1/unblock
+```
+
+Blocked feeds are marked with ⚫ in `/list` and are skipped by the reader.
+
 ### Key environment variables
 See `README.md` for the full list. Defaults connect to `postgres://admin:admin@localhost:5432/feed`.
+`AR_API_TOKEN` enables the feed validation API.
 
 ### Startup order
 1. Start PostgreSQL: `sudo pg_ctlcluster 16 main start`

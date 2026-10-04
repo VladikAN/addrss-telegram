@@ -1,6 +1,6 @@
 Текущие подписки:
 {{range .}}
-* {{if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
+* {{if .Blocked}}⚫{{else if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
   {{if .LastPub}}Последняя публикация: {{.LastPub.Format "02.01.2006 15:04"}}{{end}}
   {{if .Updated}}Последняя проверка: {{.Updated.Format "02.01.2006 15:04"}}{{end}}
 Используйте /remove {{.Normalized}} - для того чтобы отписаться от ленты.
