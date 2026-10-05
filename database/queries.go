@@ -29,11 +29,12 @@ type UserFeed struct {
 
 // Stats represents basic service statistics
 type Stats struct {
-	Users int
-	Feeds int
+	Users   int
+	Feeds   int
+	Blocked int
 }
 
-// GetStats gets total number of users and feeds
+// GetStats gets total number of users, feeds and blocked feeds
 func (db *Postgres) GetStats() (*Stats, error) {
 	result := &Stats{}
 
@@ -46,6 +47,12 @@ func (db *Postgres) GetStats() (*Stats, error) {
 	feedsQuery := `SELECT COUNT(DISTINCT uri) from feeds`
 	feedsRow := db.Pool.QueryRow(db.Context, feedsQuery)
 	if err := feedsRow.Scan(&result.Feeds); err != nil {
+		return nil, err
+	}
+
+	blockedQuery := `SELECT COUNT(*) from feeds WHERE blocked = TRUE`
+	blockedRow := db.Pool.QueryRow(db.Context, blockedQuery)
+	if err := blockedRow.Scan(&result.Blocked); err != nil {
 		return nil, err
 	}
 

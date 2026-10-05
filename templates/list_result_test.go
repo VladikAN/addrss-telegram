@@ -53,3 +53,40 @@ func TestListResult_ShowsBlackCircleForBlocked(t *testing.T) {
 		t.Error("expected red circle for unhealthy feed")
 	}
 }
+
+func TestStatsSuccess_IncludesBlocked(t *testing.T) {
+	root, err := filepath.Abs("..")
+	if err != nil {
+		t.Fatalf("resolve project root: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir to project root: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(filepath.Join(root, "templates"))
+	})
+
+	SetTemplateOutput()
+
+	stats := struct {
+		Users   int
+		Feeds   int
+		Blocked int
+	}{Users: 5, Feeds: 10, Blocked: 2}
+
+	en, err := ToTextW("en", "stats-success", stats)
+	if err != nil {
+		t.Fatalf("en template error: %v", err)
+	}
+	if !strings.Contains(en, "2 - Blocked feeds.") {
+		t.Errorf("expected blocked count in en stats, got: %s", en)
+	}
+
+	ru, err := ToTextW("ru", "stats-success", stats)
+	if err != nil {
+		t.Fatalf("ru template error: %v", err)
+	}
+	if !strings.Contains(ru, "2 - Заблокированных лент.") {
+		t.Errorf("expected blocked count in ru stats, got: %s", ru)
+	}
+}

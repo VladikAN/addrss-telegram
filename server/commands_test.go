@@ -34,7 +34,9 @@ func TestStats_ErrorOnQuery(t *testing.T) {
 
 func TestStats_Success(t *testing.T) {
 	db = &dbMock{
-		getStatsMock: func() (*database.Stats, error) { return &database.Stats{Users: 1, Feeds: 2}, nil },
+		getStatsMock: func() (*database.Stats, error) {
+			return &database.Stats{Users: 1, Feeds: 2, Blocked: 3}, nil
+		},
 	}
 
 	r, err := (&Command{admin: true}).stats()

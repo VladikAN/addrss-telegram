@@ -21,7 +21,7 @@ type Database interface {
 	// Close will termintae current connection, Should be called after all operations
 	Close()
 
-	// GetStats gets total number of users and feeds
+	// GetStats gets total number of users, feeds and blocked feeds
 	GetStats() (*Stats, error)
 
 	// AddFeed inserts new feed to feeds postgres table
