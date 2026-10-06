@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,6 +18,7 @@ import (
 // Options holds all necessary settings for the app
 type Options struct {
 	Token          string
+	APIToken       string
 	Connection     string
 	Debug          bool
 	ReaderInterval int
@@ -75,10 +78,38 @@ func Start(options Options) {
 	go handleRequests(updates, replyQueue, &options)
 	defer bot.StopReceivingUpdates()
 
+	apiServer := startValidationAPIServer(&options)
+	if apiServer != nil {
+		defer apiServer.Close()
+	}
+
 	// Stop bot operations and close all connections
 	<-ctx.Done()
 
 	log.Print("INFO Stoping updates processing")
+}
+
+func startValidationAPIServer(options *Options) *http.Server {
+	if options.APIToken == "" {
+		return nil
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "ok")
+	})
+	registerValidationAPI(mux, options)
+
+	addr := fmt.Sprintf(":%d", options.HTTPPort)
+	srv := &http.Server{Addr: addr, Handler: mux}
+	go func() {
+		log.Printf("INFO Validation API listening on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("ERROR Validation API server error: %s", err)
+		}
+	}()
+	return srv
 }
 
 func handleTerminate(cancel context.CancelFunc) {

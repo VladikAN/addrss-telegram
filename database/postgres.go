@@ -21,7 +21,7 @@ type Database interface {
 	// Close will termintae current connection, Should be called after all operations
 	Close()
 
-	// GetStats gets total number of users and feeds
+	// GetStats gets total number of users, blocked users, feeds and blocked feeds
 	GetStats() (*Stats, error)
 
 	// AddFeed inserts new feed to feeds postgres table
@@ -74,6 +74,15 @@ type Database interface {
 
 	// SetFeedBroken update feed by setting healthy to false
 	SetFeedBroken(id int) error
+
+	// GetFeedsPage returns feeds for validation with offset/limit pagination
+	GetFeedsPage(offset int, limit int) ([]Feed, int, error)
+
+	// GetFeedByID get feed record by its id
+	GetFeedByID(id int) (*Feed, error)
+
+	// SetFeedBlocked update feed blocked flag
+	SetFeedBlocked(id int, blocked bool) error
 }
 
 // Open will start database connection. Should be called first

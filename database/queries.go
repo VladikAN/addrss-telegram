@@ -15,6 +15,7 @@ type Feed struct {
 	URI        string
 	Updated    *time.Time
 	Healthy    bool
+	Blocked    bool
 	LastPub    *time.Time
 	LastPubURI string
 }
@@ -28,12 +29,13 @@ type UserFeed struct {
 
 // Stats represents basic service statistics
 type Stats struct {
-	Users   int
-	Blocked int
-	Feeds   int
+	Users        int
+	Blocked      int
+	Feeds        int
+	BlockedFeeds int
 }
 
-// GetStats gets total number of users, blocked users and feeds
+// GetStats gets total number of users, blocked users, feeds and blocked feeds
 func (db *Postgres) GetStats() (*Stats, error) {
 	result := &Stats{}
 
@@ -43,15 +45,21 @@ func (db *Postgres) GetStats() (*Stats, error) {
 		return nil, err
 	}
 
-	blockedQuery := `SELECT COUNT(*) FROM users WHERE blocked = TRUE`
-	blockedRow := db.Pool.QueryRow(db.Context, blockedQuery)
-	if err := blockedRow.Scan(&result.Blocked); err != nil {
+	blockedUsersQuery := `SELECT COUNT(*) FROM users WHERE blocked = TRUE`
+	blockedUsersRow := db.Pool.QueryRow(db.Context, blockedUsersQuery)
+	if err := blockedUsersRow.Scan(&result.Blocked); err != nil {
 		return nil, err
 	}
 
 	feedsQuery := `SELECT COUNT(DISTINCT uri) from feeds`
 	feedsRow := db.Pool.QueryRow(db.Context, feedsQuery)
 	if err := feedsRow.Scan(&result.Feeds); err != nil {
+		return nil, err
+	}
+
+	blockedFeedsQuery := `SELECT COUNT(*) from feeds WHERE blocked = TRUE`
+	blockedFeedsRow := db.Pool.QueryRow(db.Context, blockedFeedsQuery)
+	if err := blockedFeedsRow.Scan(&result.BlockedFeeds); err != nil {
 		return nil, err
 	}
 
@@ -120,7 +128,7 @@ func (db *Postgres) SetUserBlocked(userID int64) error {
 func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
@@ -136,7 +144,7 @@ func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 
 // GetUserURIFeed get user subscription by its uri (unique)
 func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
 	LIMIT 1`
@@ -147,7 +155,7 @@ func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 
 // GetUserNormalizedFeed get user subscription by its normalized name
 func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri FROM userfeeds uf
+	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
 	LIMIT 1`
@@ -158,7 +166,7 @@ func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Fee
 
 // GetFeed get feed record by its uri (unique)
 func (db *Postgres) GetFeed(uri string) (*Feed, error) {
-	query := `SELECT id, name, normalized, uri, updated, healthy, last_pub, last_pub_uri
+	query := `SELECT id, name, normalized, uri, updated, healthy, blocked, last_pub, last_pub_uri
 	FROM feeds
 	WHERE uri = $1
 	LIMIT 1`
@@ -167,15 +175,26 @@ func (db *Postgres) GetFeed(uri string) (*Feed, error) {
 	return toFeed(row)
 }
 
+// GetFeedByID get feed record by its id
+func (db *Postgres) GetFeedByID(id int) (*Feed, error) {
+	query := `SELECT id, name, normalized, uri, updated, healthy, blocked, last_pub, last_pub_uri
+	FROM feeds
+	WHERE id = $1
+	LIMIT 1`
+
+	row := db.Pool.QueryRow(db.Context, query, id)
+	return toFeed(row)
+}
+
 // GetFeeds read specified count for update
 func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	var feeds []Feed
 
-	// Get healthy or unhealthy for last day
-	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.last_pub, f.last_pub_uri
+	// Get healthy or unhealthy for last day; skip blocked feeds
+	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri
 	FROM feeds f
 	INNER JOIN userfeeds uf ON uf.feed_id = f.id 
-	WHERE f.healthy = TRUE OR f.updated < current_date
+	WHERE f.blocked = FALSE AND (f.healthy = TRUE OR f.updated < current_date)
 	ORDER BY f.updated
 	LIMIT $1`
 
@@ -186,6 +205,40 @@ func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	}
 
 	return toFeeds(rows)
+}
+
+// GetFeedsPage returns feeds for validation with offset/limit pagination
+func (db *Postgres) GetFeedsPage(offset int, limit int) ([]Feed, int, error) {
+	var total int
+	countQuery := `SELECT COUNT(*) FROM feeds`
+	if err := db.Pool.QueryRow(db.Context, countQuery).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT id, name, normalized, uri, updated, healthy, blocked, last_pub, last_pub_uri
+	FROM feeds
+	ORDER BY id
+	OFFSET $1 LIMIT $2`
+
+	rows, err := db.Pool.Query(db.Context, query, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	feeds, err := toFeeds(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return feeds, total, nil
+}
+
+// SetFeedBlocked update feed blocked flag
+func (db *Postgres) SetFeedBlocked(id int, blocked bool) error {
+	query := `UPDATE feeds SET blocked = $1 WHERE id = $2`
+	_, err := db.Pool.Exec(db.Context, query, blocked, id)
+	return err
 }
 
 // ResetFeed updates feed dates to prevent spam to first subscription after some time
@@ -292,10 +345,11 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var uri string
 	var updated *time.Time
 	var healthy bool
+	var blocked bool
 	var lastPub *time.Time
 	var lastPubURI sql.NullString
 
-	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &lastPub, &lastPubURI); err == nil {
+	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &blocked, &lastPub, &lastPubURI); err == nil {
 		return &Feed{
 			ID:         id,
 			Name:       name,
@@ -303,6 +357,7 @@ func toFeed(row pgx.Row) (*Feed, error) {
 			URI:        uri,
 			Updated:    updated,
 			Healthy:    healthy,
+			Blocked:    blocked,
 			LastPub:    lastPub,
 			LastPubURI: lastPubURI.String,
 		}, err

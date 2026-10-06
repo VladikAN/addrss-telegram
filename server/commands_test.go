@@ -35,7 +35,9 @@ func TestStats_ErrorOnQuery(t *testing.T) {
 
 func TestStats_Success(t *testing.T) {
 	db = &dbMock{
-		getStatsMock: func() (*database.Stats, error) { return &database.Stats{Users: 1, Blocked: 3, Feeds: 2}, nil },
+		getStatsMock: func() (*database.Stats, error) {
+			return &database.Stats{Users: 1, Blocked: 3, Feeds: 2, BlockedFeeds: 4}, nil
+		},
 	}
 
 	r, err := (&Command{admin: true}).stats()
@@ -513,13 +515,16 @@ type dbMock struct {
 	getUserURIFeedMock        func() (*database.Feed, error)
 	getUserNormalizedFeedMock func() (*database.Feed, error)
 	getFeedMock               func() (*database.Feed, error)
+	getFeedByIDMock           func() (*database.Feed, error)
 	getFeedsMock              func() ([]database.Feed, error)
+	getFeedsPageMock          func() ([]database.Feed, int, error)
 	resetFeedMock             func() error
 	getFeedUsersMock          func() ([]database.UserFeed, error)
 	getAllUsersMock           func() ([]int64, error)
 	setFeedUpdatedMock        func() error
 	setFeedLastPubMock        func() error
 	setFeedBrokenMock         func() error
+	setFeedBlockedMock        func() error
 }
 
 func (db *dbMock) Close() {}
@@ -554,8 +559,12 @@ func (db *dbMock) GetUserURIFeed(userID int64, uri string) (*database.Feed, erro
 func (db *dbMock) GetUserNormalizedFeed(userID int64, normalized string) (*database.Feed, error) {
 	return db.getUserNormalizedFeedMock()
 }
-func (db *dbMock) GetFeed(uri string) (*database.Feed, error)           { return db.getFeedMock() }
-func (db *dbMock) GetFeeds(count int) ([]database.Feed, error)          { return db.getFeedsMock() }
+func (db *dbMock) GetFeed(uri string) (*database.Feed, error)  { return db.getFeedMock() }
+func (db *dbMock) GetFeedByID(id int) (*database.Feed, error)  { return db.getFeedByIDMock() }
+func (db *dbMock) GetFeeds(count int) ([]database.Feed, error) { return db.getFeedsMock() }
+func (db *dbMock) GetFeedsPage(offset int, limit int) ([]database.Feed, int, error) {
+	return db.getFeedsPageMock()
+}
 func (db *dbMock) GetFeedUsers(feedID int) ([]database.UserFeed, error) { return db.getFeedUsersMock() }
 func (db *dbMock) GetAllUsers() ([]int64, error) {
 	if db.getAllUsersMock == nil {
@@ -581,4 +590,10 @@ func (db *dbMock) SetFeedBroken(id int) error {
 		return nil
 	}
 	return db.setFeedBrokenMock()
+}
+func (db *dbMock) SetFeedBlocked(id int, blocked bool) error {
+	if db.setFeedBlockedMock == nil {
+		return nil
+	}
+	return db.setFeedBlockedMock()
 }

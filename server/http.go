@@ -52,6 +52,7 @@ func StartLocal(options Options) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
+	registerValidationAPI(mux, &options)
 
 	addr := fmt.Sprintf(":%d", options.HTTPPort)
 	srv := &http.Server{Addr: addr, Handler: mux}
