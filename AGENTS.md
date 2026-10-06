@@ -9,7 +9,7 @@ AddRss is a Telegram bot for RSS/ATOM feed reading, written in Go. For local dev
 This project requires **Go 1.26**. The binary is installed at `/usr/local/go/bin/go`. Ensure `PATH` includes `/usr/local/go/bin` (the update script handles this).
 
 ### Database
-PostgreSQL 16 runs locally. The database `feed` with user `admin`/`admin` is pre-configured. Schema lives in `deploy/01-init-database.sql`. Start PostgreSQL if not running:
+PostgreSQL 16 runs locally. The database `feed` with user `admin`/`admin` is pre-configured. Schema is initialized automatically via migrations in `migrations/` directory when the app starts. Start PostgreSQL if not running:
 ```
 sudo pg_ctlcluster 16 main start
 ```

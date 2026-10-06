@@ -20,12 +20,11 @@ Type `docker-compose.exe -f .\docker-compose.yaml down` to stop bot containers.
 
 # Database Migrations
 
-The application now includes automatic database migrations that run on startup. This means:
+The application includes automatic database migrations that run on startup:
 
-- **No manual SQL scripts needed** - migrations are applied automatically
-- **Safe to restart** - migrations are only applied once using version tracking
-- **Embedded in binary** - all migrations are compiled into the application
+- **Automatic initialization** - database schema is created on first run
+- **Version tracking** - migrations are applied only once via `schema_migrations` table  
+- **Idempotent** - safe to restart, uses `IF NOT EXISTS` checks
+- **Embedded** - all SQL migrations are compiled into the binary
 
-Database schema is initialized automatically when the application starts. The `deploy/01-init-database.sql` file is kept for reference, but the actual schema is managed through migrations in the `migrations/` directory.
-
-For more information about creating and managing migrations, see [migrations/README.md](migrations/README.md).
+Migration files are located in the `migrations/` directory. To create a new migration, add a file with the naming pattern `000XXX_description.up.sql` with appropriate `IF NOT EXISTS` clauses.
