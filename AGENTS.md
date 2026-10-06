@@ -38,7 +38,7 @@ go run . --local --debug
 ```
 or with explicit database:
 ```
-AR_DATABASE="postgres://admin:admin@localhost:5432/feed" go run . --local --debug --http-port 8080
+AR_DATABASE="postgres://admin:admin@localhost:5432/feed?sslmode=disable" go run . --local --debug --http-port 8080
 ```
 Send commands via HTTP:
 ```
@@ -47,12 +47,12 @@ curl -X POST http://localhost:8080/command -d '{"user_id": 1, "text": "/help"}'
 
 **Telegram mode** (production, requires `AR_TOKEN`):
 ```
-AR_TOKEN=<token> AR_DATABASE="postgres://admin:admin@localhost:5432/feed" go run .
+AR_TOKEN=<token> AR_DATABASE="postgres://admin:admin@localhost:5432/feed?sslmode=disable" go run .
 ```
 Without a valid `AR_TOKEN`, Telegram mode will panic at startup.
 
 ### Key environment variables
-See `README.md` for the full list. Defaults connect to `postgres://admin:admin@localhost:5432/feed`.
+See `README.md` for the full list. Defaults connect to `postgres://admin:admin@localhost:5432/feed?sslmode=disable`.
 
 ### Startup order
 1. Start PostgreSQL: `sudo pg_ctlcluster 16 main start`

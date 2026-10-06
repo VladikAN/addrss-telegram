@@ -10,7 +10,7 @@ import (
 
 type opts struct {
 	Token          string `long:"token" env:"AR_TOKEN" description:"telegram bot secret token"`
-	Connection     string `long:"db" env:"AR_DATABASE" default:"postgres://admin:admin@localhost:5432/feed" description:"postgres database connection string"`
+	Connection     string `long:"db" env:"AR_DATABASE" default:"postgres://admin:admin@localhost:5432/feed?sslmode=disable" description:"postgres database connection string"`
 	Debug          bool   `long:"debug" env:"AR_DEBUG" description:"turn on-off debug messages"`
 	ReaderInterval int    `long:"reader-interval" env:"AR_READER_INTERVAL" default:"600" description:"Interval in seconds to read subscriptions for updates"`
 	ReaderFeeds    int    `long:"reader-feeds" env:"AR_READER_FEEDS" default:"100" description:"How many feeds to read between intervals"`
