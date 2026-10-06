@@ -1,0 +1,5 @@
+Por favor, especifique a URI para adicionar.
+
+/add https://example.com/feed.rss
+
+A URI começa com http:// ou https://.

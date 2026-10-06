@@ -1,0 +1,5 @@
+Por favor, especifica el nombre para eliminar.
+
+/remove [nombre]
+
+Usa /list para ver los nombres de las suscripciones.

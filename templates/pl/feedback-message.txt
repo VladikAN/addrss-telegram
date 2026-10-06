@@ -1,0 +1,3 @@
+📝 Opinia od użytkownika {{.UserID}}:
+
+{{.Message}}

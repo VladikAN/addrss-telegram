@@ -1,0 +1,1 @@
+Proszę przesłać plik OPML. Zawartość pliku zostanie przeanalizowana i dodana do subskrypcji.

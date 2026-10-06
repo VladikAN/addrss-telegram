@@ -1,0 +1,1 @@
+Twoja wiadomość z opinią jest zbyt długa. Proszę zachować ją poniżej {{.}} znaków.

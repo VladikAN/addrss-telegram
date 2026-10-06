@@ -1,0 +1,3 @@
+Proszę podać wiadomość z opinią po poleceniu /feedback.
+
+Przykład: /feedback To świetny bot, ale chciałbym zobaczyć więcej funkcji.

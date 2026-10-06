@@ -1,0 +1,7 @@
+Assinaturas ativas:
+{{range .}}
+* {{if .Blocked}}⚫{{else if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
+  {{if .LastPub}}Última publicação: {{.LastPub.Format "2006-01-02 15:04"}}{{end}}
+  {{if .Updated}}Última verificação: {{.Updated.Format "2006-01-02 15:04"}}{{end}}
+Digite /remove {{.Normalized}} - para cancelar a assinatura do feed.
+{{end}}

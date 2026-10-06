@@ -1,0 +1,5 @@
+Por favor, especifique o nome para remover.
+
+/remove [nome]
+
+Use /list para ver os nomes das assinaturas.

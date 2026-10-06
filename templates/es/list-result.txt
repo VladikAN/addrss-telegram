@@ -1,0 +1,7 @@
+Suscripciones activas:
+{{range .}}
+* {{if .Blocked}}⚫{{else if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
+  {{if .LastPub}}Última publicación: {{.LastPub.Format "2006-01-02 15:04"}}{{end}}
+  {{if .Updated}}Última verificación: {{.Updated.Format "2006-01-02 15:04"}}{{end}}
+Escribe /remove {{.Normalized}} - para cancelar la suscripción del feed.
+{{end}}

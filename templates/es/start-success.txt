@@ -1,0 +1,7 @@
+AddRss es un lector de código abierto de feeds RSS y ATOM.
+Define tus suscripciones y recibe actualizaciones a través de mensajes del bot de Telegram.
+
+Usa /help para ver la lista de comandos disponibles.
+
+Este mensaje se puede repetir con el comando /start.
+El código fuente está disponible en https://github.com/VladikAN/addrss-telegram.

@@ -1,0 +1,3 @@
+📢 Atualização do bot:
+
+{{.Message}}

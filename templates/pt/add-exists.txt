@@ -1,0 +1,1 @@
+Feed '{{.Name}}' já está presente nas assinaturas.

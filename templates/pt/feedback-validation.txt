@@ -1,0 +1,3 @@
+Por favor, forneça sua mensagem de comentário após o comando /feedback.
+
+Exemplo: /feedback Este é um ótimo bot, mas gostaria de ver mais recursos.

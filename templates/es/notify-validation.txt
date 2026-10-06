@@ -1,0 +1,3 @@
+Por favor, proporciona el mensaje de notificación después del comando /notify.
+
+Ejemplo: /notify ¡Se han agregado nuevas funciones al bot!

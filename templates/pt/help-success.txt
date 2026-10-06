@@ -1,0 +1,11 @@
+Use /list para ver a lista de assinaturas ativas.
+
+Chame /add [uri] para adicionar uma nova assinatura à lista. A URI deve começar com http:// ou https://.
+
+E /remove [nome] para remover a assinatura da lista.
+
+Você também pode usar /import ou simplesmente enviar um arquivo OPML de qualquer outro leitor de feeds para importar todos os feeds de uma vez.
+
+Use /ping para verificar se o bot está online.
+
+Use /feedback [mensagem] para enviar comentários ao administrador do bot.

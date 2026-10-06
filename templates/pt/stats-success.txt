@@ -1,0 +1,6 @@
+Estatísticas do bot.
+
+{{.Users}} - Total de usuários.
+{{.Blocked}} - Usuários bloqueados.
+{{.Feeds}} - Total de feeds.
+{{.BlockedFeeds}} - Feeds bloqueados.

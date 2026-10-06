@@ -1,0 +1,5 @@
+Arquivo enviado e adicionado às assinaturas.
+{{.Added}} - Feeds adicionados.
+{{.Errors}} - Feeds concluídos com erro.
+
+Use /list para ver a lista final de assinaturas.

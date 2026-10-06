@@ -1,0 +1,1 @@
+Por favor, carga un archivo OPML. El contenido del archivo será analizado y agregado a las suscripciones.

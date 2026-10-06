@@ -1,0 +1,6 @@
+Statystyki bota.
+
+{{.Users}} - Łączna liczba użytkowników.
+{{.Blocked}} - Zablokowani użytkownicy.
+{{.Feeds}} - Łączna liczba kanałów.
+{{.BlockedFeeds}} - Zablokowane kanały.

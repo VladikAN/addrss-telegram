@@ -1,0 +1,5 @@
+Proszę określić nazwę do usunięcia.
+
+/remove [nazwa]
+
+Użyj /list, aby zobaczyć nazwy subskrypcji.

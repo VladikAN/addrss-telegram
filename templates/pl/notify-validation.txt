@@ -1,0 +1,3 @@
+Proszę podać wiadomość powiadomienia po poleceniu /notify.
+
+Przykład: /notify Nowe funkcje zostały dodane do bota!
