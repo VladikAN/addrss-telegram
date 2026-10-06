@@ -1,0 +1,3 @@
+Nenhuma assinatura ativa.
+
+Use /add [uri] para adicionar uma URI à lista de assinaturas.

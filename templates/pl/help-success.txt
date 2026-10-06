@@ -1,0 +1,11 @@
+Użyj /list, aby zobaczyć listę aktywnych subskrypcji.
+
+Wywołaj /add [uri], aby dodać nową subskrypcję do listy. URI musi zaczynać się od http:// lub https://.
+
+I /remove [nazwa], aby usunąć subskrypcję z listy.
+
+Możesz również użyć /import lub po prostu przesłać plik OPML z dowolnego innego czytnika kanałów, aby zaimportować wszystkie kanały naraz.
+
+Użyj /ping, aby sprawdzić, czy bot jest online.
+
+Użyj /feedback [wiadomość], aby wysłać opinię do administratora bota.

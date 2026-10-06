@@ -1,0 +1,11 @@
+Usa /list para ver la lista de suscripciones activas.
+
+Llama /add [uri] para agregar una nueva suscripción a la lista. La URI debe comenzar con http:// o https://.
+
+Y /remove [nombre] para eliminar la suscripción de la lista.
+
+También puedes usar /import o simplemente cargar un archivo OPML de cualquier otro lector de feeds para importar todos los feeds a la vez.
+
+Usa /ping para verificar si el bot está en línea.
+
+Usa /feedback [mensaje] para enviar comentarios al administrador del bot.

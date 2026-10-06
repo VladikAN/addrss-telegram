@@ -1,0 +1,5 @@
+Archivo cargado y agregado a las suscripciones.
+{{.Added}} - Feeds agregados.
+{{.Errors}} - Feeds completados con error.
+
+Usa /list para ver la lista final de suscripciones.

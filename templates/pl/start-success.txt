@@ -1,0 +1,7 @@
+AddRss to czytnik open source kanałów RSS i ATOM.
+Zdefiniuj swoje subskrypcje i otrzymuj aktualizacje za pośrednictwem wiadomości bota Telegram.
+
+Użyj /help, aby zobaczyć listę dostępnych poleceń.
+
+Ta wiadomość może zostać powtórzona poleceniem /start.
+Kod źródłowy dostępny na https://github.com/VladikAN/addrss-telegram.

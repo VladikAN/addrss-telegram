@@ -1,0 +1,1 @@
+Kanał '{{.Name}}' został pomyślnie dodany do subskrypcji.

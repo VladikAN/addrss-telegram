@@ -1,0 +1,3 @@
+Brak aktywnych subskrypcji.
+
+Użyj /add [uri], aby dodać URI do listy subskrypcji.

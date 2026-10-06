@@ -1,0 +1,7 @@
+اشتراک‌های فعال:
+{{range .}}
+* {{if .Blocked}}⚫{{else if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
+  {{if .LastPub}}آخرین انتشار: {{.LastPub.Format "2006-01-02 15:04"}}{{end}}
+  {{if .Updated}}آخرین بررسی: {{.Updated.Format "2006-01-02 15:04"}}{{end}}
+برای لغو اشتراک از فید /remove {{.Normalized}} را تایپ کنید.
+{{end}}

@@ -1,0 +1,7 @@
+Aktywne subskrypcje:
+{{range .}}
+* {{if .Blocked}}⚫{{else if .Healthy}}🟢{{else}}🔴{{end}} <b>{{.Name}}</b>
+  {{if .LastPub}}Ostatnia publikacja: {{.LastPub.Format "2006-01-02 15:04"}}{{end}}
+  {{if .Updated}}Ostatnie sprawdzenie: {{.Updated.Format "2006-01-02 15:04"}}{{end}}
+Wpisz /remove {{.Normalized}} - aby anulować subskrypcję kanału.
+{{end}}

@@ -7,7 +7,7 @@ import (
 	"text/template"
 )
 
-var langs []string = []string{"en", "ru"}
+var langs []string = []string{"en", "ru", "fa", "es", "pt", "pl"}
 var output func(lang string, name string, data interface{}) (string, error)
 
 // SetTemplateOutput set standard template generation

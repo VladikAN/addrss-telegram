@@ -1,0 +1,5 @@
+Plik przesłany i dodany do subskrypcji.
+{{.Added}} - Dodane kanały.
+{{.Errors}} - Kanały zakończone z błędem.
+
+Użyj /list, aby zobaczyć końcową listę subskrypcji.

@@ -1,0 +1,3 @@
+¡Notificación enviada exitosamente!
+
+Total de usuarios: {{.Total}}
