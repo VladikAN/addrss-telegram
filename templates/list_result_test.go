@@ -54,7 +54,7 @@ func TestListResult_ShowsBlackCircleForBlocked(t *testing.T) {
 	}
 }
 
-func TestStatsSuccess_IncludesBlocked(t *testing.T) {
+func TestStatsSuccess_IncludesBlockedCounts(t *testing.T) {
 	root, err := filepath.Abs("..")
 	if err != nil {
 		t.Fatalf("resolve project root: %v", err)
@@ -69,24 +69,31 @@ func TestStatsSuccess_IncludesBlocked(t *testing.T) {
 	SetTemplateOutput()
 
 	stats := struct {
-		Users   int
-		Feeds   int
-		Blocked int
-	}{Users: 5, Feeds: 10, Blocked: 2}
+		Users        int
+		Blocked      int
+		Feeds        int
+		BlockedFeeds int
+	}{Users: 5, Blocked: 1, Feeds: 10, BlockedFeeds: 2}
 
 	en, err := ToTextW("en", "stats-success", stats)
 	if err != nil {
 		t.Fatalf("en template error: %v", err)
 	}
+	if !strings.Contains(en, "1 - Blocked users.") {
+		t.Errorf("expected blocked users in en stats, got: %s", en)
+	}
 	if !strings.Contains(en, "2 - Blocked feeds.") {
-		t.Errorf("expected blocked count in en stats, got: %s", en)
+		t.Errorf("expected blocked feeds in en stats, got: %s", en)
 	}
 
 	ru, err := ToTextW("ru", "stats-success", stats)
 	if err != nil {
 		t.Fatalf("ru template error: %v", err)
 	}
+	if !strings.Contains(ru, "1 - Заблокировали бота.") {
+		t.Errorf("expected blocked users in ru stats, got: %s", ru)
+	}
 	if !strings.Contains(ru, "2 - Заблокированных лент.") {
-		t.Errorf("expected blocked count in ru stats, got: %s", ru)
+		t.Errorf("expected blocked feeds in ru stats, got: %s", ru)
 	}
 }

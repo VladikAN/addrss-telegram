@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/templates"
 )
@@ -35,7 +36,7 @@ func TestStats_ErrorOnQuery(t *testing.T) {
 func TestStats_Success(t *testing.T) {
 	db = &dbMock{
 		getStatsMock: func() (*database.Stats, error) {
-			return &database.Stats{Users: 1, Feeds: 2, Blocked: 3}, nil
+			return &database.Stats{Users: 1, Blocked: 3, Feeds: 2, BlockedFeeds: 4}, nil
 		},
 	}
 
@@ -422,6 +423,26 @@ func TestParseCommandText_NoSlash(t *testing.T) {
 	}
 }
 
+func TestNewCommand_StripsBotSuffixFromVerb(t *testing.T) {
+	text := "/ping@mybot"
+	entities := &[]tgbotapi.MessageEntity{{Type: "bot_command", Offset: 0, Length: len(text)}}
+	msg := &tgbotapi.Message{
+		Text:     text,
+		Entities: entities,
+		Chat:     &tgbotapi.Chat{ID: 1},
+		From:     &tgbotapi.User{LanguageCode: "en"},
+	}
+	opt := &Options{}
+	cmd := newCommand(msg, opt, make(chan Reply, 1))
+	replies := cmd.run()
+	if len(replies) != 1 {
+		t.Fatalf("Expected 1 reply, got %d", len(replies))
+	}
+	if replies[0].Text != "ping-success" {
+		t.Errorf("Expected ping-success, got '%s'", replies[0].Text)
+	}
+}
+
 func TestNewLocalCommand_Admin(t *testing.T) {
 	opt := &Options{BotAdmin: 42}
 	cmd := newLocalCommand(42, "/stats", opt)
@@ -473,6 +494,7 @@ func setup() {
 	}
 
 	templates.SetCustomOutput(custom)
+	db = &dbMock{}
 }
 
 func createTestCommand() *Command {
@@ -487,6 +509,8 @@ type dbMock struct {
 	subscribeMock             func() error
 	unsubscribeMock           func() error
 	deleteUserMock            func() error
+	ensureUserMock            func() error
+	setUserBlockedMock        func() error
 	getUserFeedsMock          func() ([]database.Feed, error)
 	getUserURIFeedMock        func() (*database.Feed, error)
 	getUserNormalizedFeedMock func() (*database.Feed, error)
@@ -503,14 +527,31 @@ type dbMock struct {
 	setFeedBlockedMock        func() error
 }
 
-func (db *dbMock) Close()                             {}
-func (db *dbMock) GetStats() (*database.Stats, error) { return db.getStatsMock() }
+func (db *dbMock) Close() {}
+func (db *dbMock) GetStats() (*database.Stats, error) {
+	if db.getStatsMock == nil {
+		return &database.Stats{}, nil
+	}
+	return db.getStatsMock()
+}
 func (db *dbMock) AddFeed(name string, normalized string, uri string) (*database.Feed, error) {
 	return db.addFeedMock()
 }
 func (db *dbMock) Subscribe(userID int64, feedID int) error           { return db.subscribeMock() }
 func (db *dbMock) Unsubscribe(userID int64, feedID int) error         { return db.unsubscribeMock() }
 func (db *dbMock) DeleteUser(userID int64) error                      { return db.deleteUserMock() }
+func (db *dbMock) EnsureUser(userID int64) error {
+	if db.ensureUserMock == nil {
+		return nil
+	}
+	return db.ensureUserMock()
+}
+func (db *dbMock) SetUserBlocked(userID int64) error {
+	if db.setUserBlockedMock == nil {
+		return nil
+	}
+	return db.setUserBlockedMock()
+}
 func (db *dbMock) GetUserFeeds(userID int64) ([]database.Feed, error) { return db.getUserFeedsMock() }
 func (db *dbMock) GetUserURIFeed(userID int64, uri string) (*database.Feed, error) {
 	return db.getUserURIFeedMock()
@@ -525,11 +566,34 @@ func (db *dbMock) GetFeedsPage(offset int, limit int) ([]database.Feed, int, err
 	return db.getFeedsPageMock()
 }
 func (db *dbMock) GetFeedUsers(feedID int) ([]database.UserFeed, error) { return db.getFeedUsersMock() }
-func (db *dbMock) GetAllUsers() ([]int64, error)                        { return db.getAllUsersMock() }
-func (db *dbMock) ResetFeed(feedID int) error                           { return db.resetFeedMock() }
-func (db *dbMock) SetFeedUpdated(id int) error                          { return db.setFeedUpdatedMock() }
+func (db *dbMock) GetAllUsers() ([]int64, error) {
+	if db.getAllUsersMock == nil {
+		return nil, nil
+	}
+	return db.getAllUsersMock()
+}
+func (db *dbMock) ResetFeed(feedID int) error { return db.resetFeedMock() }
+func (db *dbMock) SetFeedUpdated(id int) error {
+	if db.setFeedUpdatedMock == nil {
+		return nil
+	}
+	return db.setFeedUpdatedMock()
+}
 func (db *dbMock) SetFeedLastPub(id int, lastPub time.Time, lastPubURI string) error {
+	if db.setFeedLastPubMock == nil {
+		return nil
+	}
 	return db.setFeedLastPubMock()
 }
-func (db *dbMock) SetFeedBroken(id int) error                    { return db.setFeedBrokenMock() }
-func (db *dbMock) SetFeedBlocked(id int, blocked bool) error     { return db.setFeedBlockedMock() }
+func (db *dbMock) SetFeedBroken(id int) error {
+	if db.setFeedBrokenMock == nil {
+		return nil
+	}
+	return db.setFeedBrokenMock()
+}
+func (db *dbMock) SetFeedBlocked(id int, blocked bool) error {
+	if db.setFeedBlockedMock == nil {
+		return nil
+	}
+	return db.setFeedBlockedMock()
+}

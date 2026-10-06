@@ -32,7 +32,7 @@ func newCommand(msg *tgbotapi.Message, opt *Options, replyQueue chan Reply) *Com
 		userID:     msg.Chat.ID,
 		admin:      msg.Chat.ID == opt.BotAdmin,
 		adminID:    opt.BotAdmin,
-		verb:       msg.CommandWithAt(),
+		verb:       msg.Command(),
 		args:       msg.CommandArguments(),
 		lang:       msg.From.LanguageCode,
 		text:       msg.Text,
@@ -83,6 +83,11 @@ func parseCommandText(text string) (string, string) {
 
 func (cmd *Command) run() []Reply {
 	log.Printf("DEBUG request: %s", cmd.text)
+
+	// Inbound activity means the user can talk to the bot again — clear blocked flag.
+	if err := db.EnsureUser(cmd.userID); err != nil {
+		log.Printf("ERROR failed to ensure user %d: %s", cmd.userID, err)
+	}
 
 	var replies []Reply
 	var response string

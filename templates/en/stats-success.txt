@@ -1,5 +1,6 @@
 Bot statistics.
 
 {{.Users}} - Total users.
+{{.Blocked}} - Blocked users.
 {{.Feeds}} - Total feeds.
-{{.Blocked}} - Blocked feeds.
+{{.BlockedFeeds}} - Blocked feeds.
