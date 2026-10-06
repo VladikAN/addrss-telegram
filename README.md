@@ -17,3 +17,15 @@ Update `docker-compose.yaml` by changing the next keys:
 Type `docker-compose.exe -f .\docker-compose.yaml up -d` to start bot containers in detached mode.
 
 Type `docker-compose.exe -f .\docker-compose.yaml down` to stop bot containers.
+
+# Database Migrations
+
+The application now includes automatic database migrations that run on startup. This means:
+
+- **No manual SQL scripts needed** - migrations are applied automatically
+- **Safe to restart** - migrations are only applied once using version tracking
+- **Embedded in binary** - all migrations are compiled into the application
+
+Database schema is initialized automatically when the application starts. The `deploy/01-init-database.sql` file is kept for reference, but the actual schema is managed through migrations in the `migrations/` directory.
+
+For more information about creating and managing migrations, see [migrations/README.md](migrations/README.md).

@@ -1,12 +1,17 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 
 	log "github.com/go-pkgz/lgr"
 	"github.com/umputun/go-flags"
+	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/server"
 )
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
 
 type opts struct {
 	Token          string `long:"token" env:"AR_TOKEN" description:"telegram bot secret token"`
@@ -34,6 +39,14 @@ func main() {
 		logOpt = append(logOpt, log.Debug)
 	}
 	log.Setup(logOpt...)
+
+	// Run database migrations before starting the server
+	log.Printf("INFO Running database migrations...")
+	if err := database.RunMigrations(op.Connection, migrationsFS); err != nil {
+		log.Printf("WARN Failed to run migrations: %s (continuing anyway)", err)
+	} else {
+		log.Printf("INFO Database migrations completed successfully")
+	}
 
 	opt := server.Options{
 		Token:          op.Token,
