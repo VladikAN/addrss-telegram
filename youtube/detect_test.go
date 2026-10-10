@@ -26,6 +26,15 @@ func TestIsYouTubeURL(t *testing.T) {
 	}
 }
 
+func TestIsYouTubeHostURL(t *testing.T) {
+	if !IsYouTubeHostURL("https://www.youtube.com/watch?v=dQw4w9WgXcQ") {
+		t.Fatal("expected youtube host url")
+	}
+	if IsYouTubeHostURL("https://example.com/feed.rss") {
+		t.Fatal("expected non-youtube url")
+	}
+}
+
 func TestExtractChannelID(t *testing.T) {
 	id := "UCHnyfMqiRRG1u-2MsSQLbXA"
 	got := ExtractChannelID("https://www.youtube.com/feeds/videos.xml?channel_id=" + id)

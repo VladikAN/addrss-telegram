@@ -27,6 +27,15 @@ func IsYouTubeURL(raw string) bool {
 	return isYouTubeHost(u.Host) && ParseRef(u) != nil
 }
 
+// IsYouTubeHostURL reports whether raw points at a YouTube host (any path).
+func IsYouTubeHostURL(raw string) bool {
+	u, err := parseURL(raw)
+	if err != nil {
+		return false
+	}
+	return isYouTubeHost(u.Host)
+}
+
 // ParseRef extracts a channel reference from a parsed YouTube URL.
 func ParseRef(u *url.URL) *Ref {
 	if u == nil || !isYouTubeHost(u.Host) {

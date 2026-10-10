@@ -197,6 +197,14 @@ func (cmd *Command) add() (string, error) {
 		return templates.ToTextW(cmd.lang, "add-success", feed)
 	}
 
+	// Never send YouTube URLs to the RSS parser — gofeed cannot read channel pages.
+	if youtube.IsYouTubeHostURL(cmd.args) {
+		if ytClient == nil {
+			return templates.ToText(cmd.lang, "add-youtube-no-key")
+		}
+		return templates.ToTextW(cmd.lang, "add-youtube-error", "unsupported youtube channel url")
+	}
+
 	if userFeed, err := db.GetUserURIFeed(cmd.userID, cmd.args); err != nil {
 		return emptyText, err
 	} else if userFeed != nil {
