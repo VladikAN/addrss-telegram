@@ -33,6 +33,7 @@ services:
       environment:
         - AR_TOKEN
         - AR_API_TOKEN
+        - AR_YOUTUBE_API_KEY
         - AR_BOT_ADMIN
         - AR_DATABASE=postgres://admin:admin@postgres/feed
         - AR_DEBUG=false

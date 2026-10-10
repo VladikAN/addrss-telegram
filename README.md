@@ -13,7 +13,7 @@ Update `docker-compose.yaml` by changing the next keys:
 * POSTGRES_PASSWORD - new secret database password.
 * AR_TOKEN - secret bot token from telegram API.
 * AR_DATABASE - database connection string with POSTGRES_USER and POSTGRES_PASSWORD defined earlier.
-* AR_YOUTUBE_API_KEY - (optional) Google API key with YouTube Data API access, required to add YouTube channels.
+* AR_YOUTUBE_API_KEY - (optional) Google API key with YouTube Data API access, required to add YouTube channels. Pass it through docker-compose (`AR_YOUTUBE_API_KEY`) and recreate the `addrss` container after deploy.
 
 Type `docker-compose.exe -f .\docker-compose.yaml up -d` to start bot containers in detached mode.
 
