@@ -5,11 +5,11 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var (
 	channelIDRe = regexp.MustCompile(`^UC[\w-]{22}$`)
-	handleRe    = regexp.MustCompile(`^@?[\w.-]{3,30}$`)
 )
 
 // Ref describes a YouTube channel reference extracted from a URL.
@@ -60,19 +60,45 @@ func ParseRef(u *url.URL) *Ref {
 
 	switch {
 	case strings.HasPrefix(parts[0], "@"):
-		handle := strings.TrimPrefix(parts[0], "@")
-		if handleRe.MatchString(handle) {
+		handle := pathUnescape(strings.TrimPrefix(parts[0], "@"))
+		if validHandle(handle) {
 			return &Ref{Kind: "handle", Value: handle}
 		}
 	case parts[0] == "channel" && len(parts) >= 2 && channelIDRe.MatchString(parts[1]):
 		return &Ref{Kind: "id", Value: parts[1]}
 	case parts[0] == "user" && len(parts) >= 2 && parts[1] != "":
-		return &Ref{Kind: "username", Value: parts[1]}
+		return &Ref{Kind: "username", Value: pathUnescape(parts[1])}
 	case parts[0] == "c" && len(parts) >= 2 && parts[1] != "":
-		return &Ref{Kind: "custom", Value: parts[1]}
+		return &Ref{Kind: "custom", Value: pathUnescape(parts[1])}
 	}
 
 	return nil
+}
+
+func pathUnescape(value string) string {
+	if unescaped, err := url.PathUnescape(value); err == nil {
+		return unescaped
+	}
+	return value
+}
+
+// validHandle accepts YouTube handles with Unicode letters (e.g. Cyrillic).
+func validHandle(handle string) bool {
+	handle = strings.TrimSpace(handle)
+	if handle == "" {
+		return false
+	}
+	runes := []rune(handle)
+	if len(runes) < 3 || len(runes) > 30 {
+		return false
+	}
+	for _, r := range runes {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '.' || r == '-' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // ExtractChannelID returns a channel id when the URL already contains one.

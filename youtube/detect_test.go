@@ -8,6 +8,8 @@ func TestIsYouTubeURL(t *testing.T) {
 		want bool
 	}{
 		{"https://www.youtube.com/@veritasium", true},
+		{"https://www.youtube.com/@полигон98", true},
+		{"https://www.youtube.com/@%D0%BF%D0%BE%D0%BB%D0%B8%D0%B3%D0%BE%D0%BD98", true},
 		{"https://youtube.com/channel/UCHnyfMqiRRG1u-2MsSQLbXA", true},
 		{"https://www.youtube.com/c/Veritasium", true},
 		{"https://www.youtube.com/user/1veritasium", true},
@@ -23,6 +25,17 @@ func TestIsYouTubeURL(t *testing.T) {
 		if got := IsYouTubeURL(tc.in); got != tc.want {
 			t.Errorf("IsYouTubeURL(%q)=%v want %v", tc.in, got, tc.want)
 		}
+	}
+}
+
+func TestParseRef_CyrillicHandle(t *testing.T) {
+	u, err := parseURL("https://www.youtube.com/@полигон98")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref := ParseRef(u)
+	if ref == nil || ref.Kind != "handle" || ref.Value != "полигон98" {
+		t.Fatalf("unexpected ref: %+v", ref)
 	}
 }
 
