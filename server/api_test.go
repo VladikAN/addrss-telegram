@@ -71,8 +71,8 @@ func TestListFeedsHandler_Success(t *testing.T) {
 	db = &dbMock{
 		getFeedsPageMock: func() ([]database.Feed, int, error) {
 			return []database.Feed{
-				{ID: 1, Name: "Feed A", URI: "https://a.example/rss", Healthy: true, Blocked: false},
-				{ID: 2, Name: "Feed B", URI: "https://b.example/rss", Healthy: false, Blocked: true},
+				{ID: 1, Name: "Feed A", URI: "https://a.example/rss", SourceType: database.SourceRSS, Healthy: true, Blocked: false},
+				{ID: 2, Name: "Channel", URI: "https://www.youtube.com/channel/UCHnyfMqiRRG1u-2MsSQLbXA", SourceType: database.SourceYouTube, ExternalID: "UCHnyfMqiRRG1u-2MsSQLbXA", Healthy: false, Blocked: true},
 			}, 10, nil
 		},
 	}
@@ -101,6 +101,15 @@ func TestListFeedsHandler_Success(t *testing.T) {
 	}
 	if !resp.Feeds[1].Blocked {
 		t.Error("Expected second feed to be blocked")
+	}
+	if resp.Feeds[0].SourceType != database.SourceRSS {
+		t.Errorf("Expected first feed source_type=rss, got %q", resp.Feeds[0].SourceType)
+	}
+	if resp.Feeds[1].SourceType != database.SourceYouTube {
+		t.Errorf("Expected second feed source_type=youtube, got %q", resp.Feeds[1].SourceType)
+	}
+	if resp.Feeds[1].ExternalID != "UCHnyfMqiRRG1u-2MsSQLbXA" {
+		t.Errorf("Expected youtube external_id, got %q", resp.Feeds[1].ExternalID)
 	}
 }
 
