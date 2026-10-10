@@ -30,6 +30,7 @@ func StartLocal(options Options) {
 	go handleTerminate(cancel)
 
 	templates.SetTemplateOutput()
+	configureYouTube(options.YouTubeAPIKey)
 
 	var err error
 	db, err = database.Open(ctx, options.Connection)

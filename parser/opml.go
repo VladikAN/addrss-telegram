@@ -4,6 +4,9 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
+	"strings"
+
+	"github.com/vladikan/addrss-telegram/youtube"
 )
 
 type opml struct {
@@ -17,10 +20,12 @@ type body struct {
 }
 
 type outline struct {
-	XMLName xml.Name `xml:"outline"`
-	Type    string   `xml:"type,attr"`
-	Text    string   `xml:"text,attr"`
-	URL     string   `xml:"xmlUrl,attr"`
+	XMLName  xml.Name  `xml:"outline"`
+	Type     string    `xml:"type,attr"`
+	Text     string    `xml:"text,attr"`
+	Title    string    `xml:"title,attr"`
+	URL      string    `xml:"xmlUrl,attr"`
+	Outlines []outline `xml:"outline"`
 }
 
 // OpmlItem is an single feed from opml file
@@ -51,12 +56,34 @@ func decode(io io.Reader) ([]OpmlItem, error) {
 		return []OpmlItem{}, nil
 	}
 
+	return collectOutlines(fl.Body.Outlines), nil
+}
+
+func collectOutlines(outlines []outline) []OpmlItem {
 	var result []OpmlItem
-	for _, outline := range fl.Body.Outlines {
-		if outline.Type == "rss" {
-			result = append(result, OpmlItem{Title: outline.Text, URL: outline.URL})
+	for _, item := range outlines {
+		if isImportableOutline(item) {
+			title := strings.TrimSpace(item.Text)
+			if title == "" {
+				title = strings.TrimSpace(item.Title)
+			}
+			result = append(result, OpmlItem{Title: title, URL: strings.TrimSpace(item.URL)})
+		}
+		if len(item.Outlines) > 0 {
+			result = append(result, collectOutlines(item.Outlines)...)
 		}
 	}
+	return result
+}
 
-	return result, nil
+func isImportableOutline(item outline) bool {
+	url := strings.TrimSpace(item.URL)
+	if url == "" {
+		return false
+	}
+	if youtube.IsYouTubeURL(url) {
+		return true
+	}
+	t := strings.ToLower(strings.TrimSpace(item.Type))
+	return t == "rss" || t == "atom"
 }

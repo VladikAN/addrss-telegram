@@ -1,10 +1,10 @@
 Use /list to see a list of the active subscriptions.
 
-Call /add [uri] to add a new subscription to the list. URI must start with the http:// or https://.
+Call /add [uri] to add a new subscription. URI can be an RSS/Atom feed or a YouTube channel (https://youtube.com/@channel).
 
 And /remove [name] to remove the subscription from the list.
 
-Also you can use /import or just upload OPML file from any other feed reader to import all feeds at once.
+Also you can use /import or just upload OPML file from any other feed reader (including YouTube subscriptions) to import all feeds at once.
 
 Use /ping to check if the bot is online.
 

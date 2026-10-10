@@ -8,6 +8,7 @@ import (
 	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/parser"
 	"github.com/vladikan/addrss-telegram/templates"
+	"github.com/vladikan/addrss-telegram/youtube"
 )
 
 // Reader holds reader settings
@@ -74,7 +75,7 @@ func (rd *Reader) readFeeds() error {
 
 	// Read feeds from servers
 	for _, feed := range feeds {
-		updates, err := parser.GetUpdates(feed.URI, *feed.LastPub)
+		updates, err := parser.GetUpdates(feedReadURI(feed), *feed.LastPub)
 		if err != nil {
 			log.Printf("ERROR Feed '%s' unable get updates: %s", feed.Normalized, err)
 			rd.DB.SetFeedBroken(feed.ID)
@@ -142,4 +143,17 @@ func (rd *Reader) sendUpdates(updates []parser.Topic, users []database.UserFeed)
 			rd.Outbox <- Reply{ChatID: usr.UserID, Text: txt}
 		}
 	}
+}
+
+func feedReadURI(feed database.Feed) string {
+	if feed.SourceType == database.SourceYouTube {
+		channelID := feed.ExternalID
+		if channelID == "" {
+			channelID = youtube.ExtractChannelID(feed.URI)
+		}
+		if channelID != "" {
+			return youtube.AtomFeedURL(channelID)
+		}
+	}
+	return feed.URI
 }

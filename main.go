@@ -16,6 +16,7 @@ var migrationsFS embed.FS
 type opts struct {
 	Token          string `long:"token" env:"AR_TOKEN" description:"telegram bot secret token"`
 	APIToken       string `long:"api-token" env:"AR_API_TOKEN" description:"token for feed validation HTTP API"`
+	YouTubeAPIKey  string `long:"youtube-api-key" env:"AR_YOUTUBE_API_KEY" description:"Google API key for YouTube Data API"`
 	Connection     string `long:"db" env:"AR_DATABASE" default:"postgres://admin:admin@localhost:5432/feed" description:"postgres database connection string"`
 	Debug          bool   `long:"debug" env:"AR_DEBUG" description:"turn on-off debug messages"`
 	ReaderInterval int    `long:"reader-interval" env:"AR_READER_INTERVAL" default:"600" description:"Interval in seconds to read subscriptions for updates"`
@@ -52,6 +53,7 @@ func main() {
 	opt := server.Options{
 		Token:          op.Token,
 		APIToken:       op.APIToken,
+		YouTubeAPIKey:  op.YouTubeAPIKey,
 		Connection:     op.Connection,
 		Debug:          op.Debug,
 		ReaderInterval: op.ReaderInterval,

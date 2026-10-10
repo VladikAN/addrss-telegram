@@ -13,12 +13,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/templates"
+	"github.com/vladikan/addrss-telegram/youtube"
 )
 
 // Options holds all necessary settings for the app
 type Options struct {
 	Token          string
 	APIToken       string
+	YouTubeAPIKey  string
 	Connection     string
 	Debug          bool
 	ReaderInterval int
@@ -35,6 +37,7 @@ type Reply struct {
 
 var bot *tgbotapi.BotAPI
 var db database.Database
+var ytClient *youtube.Client
 
 // Start will call for bot instance and process update messages
 func Start(options Options) {
@@ -55,6 +58,7 @@ func Start(options Options) {
 	go handleTerminate(cancel)
 
 	templates.SetTemplateOutput()
+	configureYouTube(options.YouTubeAPIKey)
 
 	// Set db connection settings and use pool
 	db, err = database.Open(ctx, options.Connection)
@@ -87,6 +91,16 @@ func Start(options Options) {
 	<-ctx.Done()
 
 	log.Print("INFO Stoping updates processing")
+}
+
+func configureYouTube(apiKey string) {
+	if strings.TrimSpace(apiKey) == "" {
+		ytClient = nil
+		log.Print("INFO YouTube API key is not set; /add for YouTube channels is disabled")
+		return
+	}
+	ytClient = youtube.NewClient(apiKey)
+	log.Print("INFO YouTube channel subscriptions enabled")
 }
 
 func startValidationAPIServer(options *Options) *http.Server {

@@ -72,6 +72,15 @@ Blocked feeds are marked with ⚫ in `/list` and are skipped by the reader.
 ### Key environment variables
 See `README.md` for the full list. Defaults connect to `postgres://admin:admin@localhost:5432/feed`.
 `AR_API_TOKEN` enables the feed validation API.
+`AR_YOUTUBE_API_KEY` enables `/add` and OPML import for YouTube channel URLs (YouTube Data API). Updates are read via the public Atom feed and do not consume API quota.
+
+### YouTube subscriptions
+```
+AR_YOUTUBE_API_KEY=<google-api-key> AR_DATABASE="postgres://admin:admin@localhost:5432/feed" go run . --local --debug
+curl -X POST http://localhost:8080/command -d '{"user_id": 1, "text": "/add https://www.youtube.com/@veritasium"}'
+curl -X POST http://localhost:8080/command -d '{"user_id": 1, "text": "/list"}'
+```
+`/list` marks sources as `[YT]` or `[RSS]`.
 
 ### Startup order
 1. Start PostgreSQL: `sudo pg_ctlcluster 16 main start`

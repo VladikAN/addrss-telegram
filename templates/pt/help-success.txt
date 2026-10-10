@@ -1,10 +1,10 @@
 Use /list para ver a lista de assinaturas ativas.
 
-Chame /add [uri] para adicionar uma nova assinatura à lista. A URI deve começar com http:// ou https://.
+Chame /add [uri] para adicionar uma nova assinatura. A URI pode ser um feed RSS/Atom ou um canal do YouTube (https://youtube.com/@channel).
 
 E /remove [nome] para remover a assinatura da lista.
 
-Você também pode usar /import ou simplesmente enviar um arquivo OPML de qualquer outro leitor de feeds para importar todos os feeds de uma vez.
+Você também pode usar /import ou simplesmente enviar um arquivo OPML de qualquer outro leitor de feeds (incluindo assinaturas do YouTube) para importar todos os feeds de uma vez.
 
 Use /ping para verificar se o bot está online.
 

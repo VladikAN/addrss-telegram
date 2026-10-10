@@ -9,6 +9,7 @@ import (
 	"github.com/vladikan/addrss-telegram/database"
 	"github.com/vladikan/addrss-telegram/parser"
 	"github.com/vladikan/addrss-telegram/templates"
+	"github.com/vladikan/addrss-telegram/youtube"
 )
 
 // Command is to aggregate message information and execute user command
@@ -171,6 +172,31 @@ func (cmd *Command) add() (string, error) {
 		return templates.ToText(cmd.lang, "add-validation")
 	}
 
+	if youtube.IsYouTubeURL(cmd.args) {
+		source, err := resolveSource(cmd.args, "")
+		if err != nil {
+			if isYouTubeConfigError(err) {
+				return templates.ToText(cmd.lang, "add-youtube-no-key")
+			}
+			if isYouTubeUserError(err) {
+				return templates.ToTextW(cmd.lang, "add-youtube-error", err.Error())
+			}
+			return emptyText, err
+		}
+
+		if userFeed, err := db.GetUserURIFeed(cmd.userID, source.URI); err != nil {
+			return emptyText, err
+		} else if userFeed != nil {
+			return templates.ToTextW(cmd.lang, "add-exists", userFeed)
+		}
+
+		feed, err := addResolvedFeed(cmd.userID, source)
+		if err != nil {
+			return emptyText, err
+		}
+		return templates.ToTextW(cmd.lang, "add-success", feed)
+	}
+
 	if userFeed, err := db.GetUserURIFeed(cmd.userID, cmd.args); err != nil {
 		return emptyText, err
 	} else if userFeed != nil {
@@ -254,7 +280,39 @@ func (cmd *Command) list() (string, error) {
 	return templates.ToTextW(cmd.lang, "list-result", feeds)
 }
 
+type resolvedSource struct {
+	URI        string
+	Title      string
+	SourceType string
+	ExternalID string
+}
+
+func resolveSource(uri string, titleHint string) (*resolvedSource, error) {
+	if !youtube.IsYouTubeURL(uri) {
+		return nil, fmt.Errorf("not a youtube url")
+	}
+
+	ch, err := youtube.Resolve(uri, titleHint, ytClient)
+	if err != nil {
+		return nil, err
+	}
+	return &resolvedSource{
+		URI:        youtube.CanonicalURL(ch.ID),
+		Title:      ch.Title,
+		SourceType: database.SourceYouTube,
+		ExternalID: ch.ID,
+	}, nil
+}
+
 func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
+	if youtube.IsYouTubeURL(uri) {
+		source, err := resolveSource(uri, title)
+		if err != nil {
+			return nil, err
+		}
+		return addResolvedFeed(userID, source)
+	}
+
 	feed, err := db.GetFeed(uri)
 	if err != nil {
 		return nil, err
@@ -268,7 +326,7 @@ func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
 			}
 		}
 
-		feed, err = db.AddFeed(title, normalize(title), uri)
+		feed, err = db.AddFeed(title, normalize(title), uri, database.SourceRSS, "")
 		if err != nil {
 			return nil, err
 		}
@@ -282,6 +340,44 @@ func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
 	}
 
 	return feed, nil
+}
+
+func addResolvedFeed(userID int64, source *resolvedSource) (*database.Feed, error) {
+	feed, err := db.GetFeed(source.URI)
+	if err != nil {
+		return nil, err
+	}
+
+	if feed == nil {
+		feed, err = db.AddFeed(source.Title, normalize(source.Title), source.URI, source.SourceType, source.ExternalID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_ = db.ResetFeed(feed.ID)
+	}
+
+	err = db.Subscribe(userID, feed.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return feed, nil
+}
+
+func isYouTubeConfigError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "youtube api key is not configured")
+}
+
+func isYouTubeUserError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "unsupported youtube") ||
+		strings.Contains(msg, "youtube channel not found") ||
+		strings.Contains(msg, "youtube api error") ||
+		strings.Contains(msg, "invalid youtube url")
 }
 
 func (cmd *Command) feedbackMulti() []Reply {

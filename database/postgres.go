@@ -25,7 +25,7 @@ type Database interface {
 	GetStats() (*Stats, error)
 
 	// AddFeed inserts new feed to feeds postgres table
-	AddFeed(name string, normalized string, uri string) (*Feed, error)
+	AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, error)
 
 	// Subscribe bind relation between user and feed
 	Subscribe(userID int64, feedID int) error
