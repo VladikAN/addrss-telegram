@@ -32,3 +32,31 @@ func TestDecode(t *testing.T) {
 		t.Errorf("Expected 'feed2-feed2XMLUri', but was '%s-%s'", rst[1].Title, rst[1].URL)
 	}
 }
+
+func TestDecode_NestedAndYouTube(t *testing.T) {
+	xml := `<?xml version="1.0" encoding="utf-8"?>
+	<opml version="1.0">
+	<body>
+		<outline text="Folder">
+			<outline type="rss" text="Blog" xmlUrl="https://example.com/rss"/>
+			<outline text="Channel" title="Channel Title" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA"/>
+		</outline>
+	</body></opml>`
+
+	rst, err := decode(strings.NewReader(xml))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if len(rst) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(rst))
+	}
+	if rst[0].URL != "https://example.com/rss" {
+		t.Errorf("unexpected rss url: %s", rst[0].URL)
+	}
+	if !strings.Contains(rst[1].URL, "channel_id=") {
+		t.Errorf("expected youtube feed url, got %s", rst[1].URL)
+	}
+	if rst[1].Title != "Channel" {
+		t.Errorf("expected title Channel, got %q", rst[1].Title)
+	}
+}

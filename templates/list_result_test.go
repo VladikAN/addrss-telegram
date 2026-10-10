@@ -24,18 +24,19 @@ func TestListResult_ShowsBlackCircleForBlocked(t *testing.T) {
 
 	now := time.Now()
 	type feedView struct {
-		Name       string
-		Normalized string
-		Healthy    bool
-		Blocked    bool
-		Updated    *time.Time
-		LastPub    *time.Time
+		Name        string
+		Normalized  string
+		SourceLabel string
+		Healthy     bool
+		Blocked     bool
+		Updated     *time.Time
+		LastPub     *time.Time
 	}
 
 	feeds := []feedView{
-		{Name: "Blocked Feed", Normalized: "blocked-feed", Healthy: true, Blocked: true, Updated: &now, LastPub: &now},
-		{Name: "Healthy Feed", Normalized: "healthy-feed", Healthy: true, Blocked: false, Updated: &now, LastPub: &now},
-		{Name: "Broken Feed", Normalized: "broken-feed", Healthy: false, Blocked: false, Updated: &now, LastPub: &now},
+		{Name: "Blocked Feed", Normalized: "blocked-feed", SourceLabel: "RSS", Healthy: true, Blocked: true, Updated: &now, LastPub: &now},
+		{Name: "Healthy Feed", Normalized: "healthy-feed", SourceLabel: "RSS", Healthy: true, Blocked: false, Updated: &now, LastPub: &now},
+		{Name: "Broken Feed", Normalized: "broken-feed", SourceLabel: "YT", Healthy: false, Blocked: false, Updated: &now, LastPub: &now},
 	}
 
 	text, err := ToTextW("en", "list-result", feeds)
@@ -51,6 +52,12 @@ func TestListResult_ShowsBlackCircleForBlocked(t *testing.T) {
 	}
 	if !strings.Contains(text, "🔴") {
 		t.Error("expected red circle for unhealthy feed")
+	}
+	if !strings.Contains(text, "[RSS]") {
+		t.Error("expected [RSS] source label")
+	}
+	if !strings.Contains(text, "[YT]") {
+		t.Error("expected [YT] source label")
 	}
 }
 

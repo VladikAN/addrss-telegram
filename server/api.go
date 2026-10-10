@@ -21,6 +21,8 @@ type feedResponse struct {
 	Name       string     `json:"name"`
 	Normalized string     `json:"normalized"`
 	URI        string     `json:"uri"`
+	SourceType string     `json:"source_type"`
+	ExternalID string     `json:"external_id,omitempty"`
 	Updated    *time.Time `json:"updated,omitempty"`
 	Healthy    bool       `json:"healthy"`
 	Blocked    bool       `json:"blocked"`
@@ -170,11 +172,17 @@ func toFeedResponses(feeds []database.Feed) []feedResponse {
 }
 
 func toFeedResponse(feed database.Feed) feedResponse {
+	sourceType := feed.SourceType
+	if sourceType == "" {
+		sourceType = database.SourceRSS
+	}
 	return feedResponse{
 		ID:         feed.ID,
 		Name:       feed.Name,
 		Normalized: feed.Normalized,
 		URI:        feed.URI,
+		SourceType: sourceType,
+		ExternalID: feed.ExternalID,
 		Updated:    feed.Updated,
 		Healthy:    feed.Healthy,
 		Blocked:    feed.Blocked,

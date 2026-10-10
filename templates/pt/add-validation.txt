@@ -1,5 +1,6 @@
 Por favor, especifique a URI para adicionar.
 
 /add https://example.com/feed.rss
+/add https://www.youtube.com/@channel
 
-A URI começa com http:// ou https://.
+A URI começa com http:// ou https://. Feeds RSS/Atom e canais do YouTube são suportados.

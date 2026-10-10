@@ -1,5 +1,6 @@
 Пожалуйста укажите адрес ленты. Например,
 
 /add https://example.com/feed.rss
+/add https://www.youtube.com/@channel
 
-Адрес должен начинаться с http:// или https://.
+Адрес должен начинаться с http:// или https://. Поддерживаются RSS/Atom и каналы YouTube.

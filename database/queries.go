@@ -13,11 +13,21 @@ type Feed struct {
 	Name       string
 	Normalized string
 	URI        string
+	SourceType string
+	ExternalID string
 	Updated    *time.Time
 	Healthy    bool
 	Blocked    bool
 	LastPub    *time.Time
 	LastPubURI string
+}
+
+// SourceLabel returns a short marker for UI lists: YT or RSS.
+func (f Feed) SourceLabel() string {
+	if f.SourceType == SourceYouTube {
+		return "YT"
+	}
+	return "RSS"
 }
 
 // UserFeed represents user subscription to the feed
@@ -67,9 +77,12 @@ func (db *Postgres) GetStats() (*Stats, error) {
 }
 
 // AddFeed inserts new feed to feeds postgres table
-func (db *Postgres) AddFeed(name string, normalized string, uri string) (*Feed, error) {
-	query := `INSERT INTO feeds (name, normalized, uri) VALUES ($1, $2, $3) ON CONFLICT (uri) DO NOTHING`
-	_, err := db.Pool.Exec(db.Context, query, name, normalized, uri)
+func (db *Postgres) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, error) {
+	if sourceType == "" {
+		sourceType = SourceRSS
+	}
+	query := `INSERT INTO feeds (name, normalized, uri, source_type, external_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (uri) DO NOTHING`
+	_, err := db.Pool.Exec(db.Context, query, name, normalized, uri, sourceType, externalID)
 	if err != nil {
 		return nil, err
 	}
@@ -124,11 +137,14 @@ func (db *Postgres) SetUserBlocked(userID int64) error {
 	return err
 }
 
+const feedSelectColumns = `id, name, normalized, uri, source_type, external_id, updated, healthy, blocked, last_pub, last_pub_uri`
+const feedSelectColumnsPrefixed = `f.id, f.name, f.normalized, f.uri, f.source_type, f.external_id, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri`
+
 // GetUserFeeds gets user subscriptions
 func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 	var feeds []Feed
 
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri FROM userfeeds uf
+	query := `SELECT ` + feedSelectColumnsPrefixed + ` FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1
 	ORDER BY uf.added`
@@ -144,7 +160,7 @@ func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
 
 // GetUserURIFeed get user subscription by its uri (unique)
 func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri FROM userfeeds uf
+	query := `SELECT ` + feedSelectColumnsPrefixed + ` FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.uri = $2
 	LIMIT 1`
@@ -155,7 +171,7 @@ func (db *Postgres) GetUserURIFeed(userID int64, uri string) (*Feed, error) {
 
 // GetUserNormalizedFeed get user subscription by its normalized name
 func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Feed, error) {
-	query := `SELECT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri FROM userfeeds uf
+	query := `SELECT ` + feedSelectColumnsPrefixed + ` FROM userfeeds uf
 	INNER JOIN feeds f ON f.id = uf.feed_id
 	WHERE uf.user_id = $1 AND f.normalized = $2
 	LIMIT 1`
@@ -166,7 +182,7 @@ func (db *Postgres) GetUserNormalizedFeed(userID int64, normalized string) (*Fee
 
 // GetFeed get feed record by its uri (unique)
 func (db *Postgres) GetFeed(uri string) (*Feed, error) {
-	query := `SELECT id, name, normalized, uri, updated, healthy, blocked, last_pub, last_pub_uri
+	query := `SELECT ` + feedSelectColumns + `
 	FROM feeds
 	WHERE uri = $1
 	LIMIT 1`
@@ -177,7 +193,7 @@ func (db *Postgres) GetFeed(uri string) (*Feed, error) {
 
 // GetFeedByID get feed record by its id
 func (db *Postgres) GetFeedByID(id int) (*Feed, error) {
-	query := `SELECT id, name, normalized, uri, updated, healthy, blocked, last_pub, last_pub_uri
+	query := `SELECT ` + feedSelectColumns + `
 	FROM feeds
 	WHERE id = $1
 	LIMIT 1`
@@ -191,7 +207,7 @@ func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	var feeds []Feed
 
 	// Get healthy or unhealthy for last day; skip blocked feeds
-	query := `SELECT DISTINCT f.id, f.name, f.normalized, f.uri, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri
+	query := `SELECT DISTINCT ` + feedSelectColumnsPrefixed + `
 	FROM feeds f
 	INNER JOIN userfeeds uf ON uf.feed_id = f.id 
 	WHERE f.blocked = FALSE AND (f.healthy = TRUE OR f.updated < current_date)
@@ -215,7 +231,7 @@ func (db *Postgres) GetFeedsPage(offset int, limit int) ([]Feed, int, error) {
 		return nil, 0, err
 	}
 
-	query := `SELECT id, name, normalized, uri, updated, healthy, blocked, last_pub, last_pub_uri
+	query := `SELECT ` + feedSelectColumns + `
 	FROM feeds
 	ORDER BY id
 	OFFSET $1 LIMIT $2`
@@ -343,18 +359,25 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var name string
 	var normalized string
 	var uri string
+	var sourceType string
+	var externalID string
 	var updated *time.Time
 	var healthy bool
 	var blocked bool
 	var lastPub *time.Time
 	var lastPubURI sql.NullString
 
-	if err := row.Scan(&id, &name, &normalized, &uri, &updated, &healthy, &blocked, &lastPub, &lastPubURI); err == nil {
+	if err := row.Scan(&id, &name, &normalized, &uri, &sourceType, &externalID, &updated, &healthy, &blocked, &lastPub, &lastPubURI); err == nil {
+		if sourceType == "" {
+			sourceType = SourceRSS
+		}
 		return &Feed{
 			ID:         id,
 			Name:       name,
 			Normalized: normalized,
 			URI:        uri,
+			SourceType: sourceType,
+			ExternalID: externalID,
 			Updated:    updated,
 			Healthy:    healthy,
 			Blocked:    blocked,
