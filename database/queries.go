@@ -17,9 +17,10 @@ type Feed struct {
 	ExternalID string
 	Updated    *time.Time
 	Healthy    bool
-	Blocked    bool
-	LastPub    *time.Time
-	LastPubURI string
+	Blocked     bool
+	LastChecked *time.Time
+	LastPub     *time.Time
+	LastPubURI  string
 }
 
 // SourceLabel returns a short marker for UI lists: YT or RSS.
@@ -137,8 +138,8 @@ func (db *Postgres) SetUserBlocked(userID int64) error {
 	return err
 }
 
-const feedSelectColumns = `id, name, normalized, uri, source_type, external_id, updated, healthy, blocked, last_pub, last_pub_uri`
-const feedSelectColumnsPrefixed = `f.id, f.name, f.normalized, f.uri, f.source_type, f.external_id, f.updated, f.healthy, f.blocked, f.last_pub, f.last_pub_uri`
+const feedSelectColumns = `id, name, normalized, uri, source_type, external_id, updated, healthy, blocked, last_checked, last_pub, last_pub_uri`
+const feedSelectColumnsPrefixed = `f.id, f.name, f.normalized, f.uri, f.source_type, f.external_id, f.updated, f.healthy, f.blocked, f.last_checked, f.last_pub, f.last_pub_uri`
 
 // GetUserFeeds gets user subscriptions
 func (db *Postgres) GetUserFeeds(userID int64) ([]Feed, error) {
@@ -233,7 +234,7 @@ func (db *Postgres) GetFeedsPage(offset int, limit int) ([]Feed, int, error) {
 
 	query := `SELECT ` + feedSelectColumns + `
 	FROM feeds
-	ORDER BY id
+	ORDER BY last_checked ASC NULLS FIRST, id ASC
 	OFFSET $1 LIMIT $2`
 
 	rows, err := db.Pool.Query(db.Context, query, offset, limit)
@@ -250,9 +251,9 @@ func (db *Postgres) GetFeedsPage(offset int, limit int) ([]Feed, int, error) {
 	return feeds, total, nil
 }
 
-// SetFeedBlocked update feed blocked flag
+// SetFeedBlocked update feed blocked flag and last check time
 func (db *Postgres) SetFeedBlocked(id int, blocked bool) error {
-	query := `UPDATE feeds SET blocked = $1 WHERE id = $2`
+	query := `UPDATE feeds SET blocked = $1, last_checked = CURRENT_TIMESTAMP WHERE id = $2`
 	_, err := db.Pool.Exec(db.Context, query, blocked, id)
 	return err
 }
@@ -364,25 +365,27 @@ func toFeed(row pgx.Row) (*Feed, error) {
 	var updated *time.Time
 	var healthy bool
 	var blocked bool
+	var lastChecked *time.Time
 	var lastPub *time.Time
 	var lastPubURI sql.NullString
 
-	if err := row.Scan(&id, &name, &normalized, &uri, &sourceType, &externalID, &updated, &healthy, &blocked, &lastPub, &lastPubURI); err == nil {
+	if err := row.Scan(&id, &name, &normalized, &uri, &sourceType, &externalID, &updated, &healthy, &blocked, &lastChecked, &lastPub, &lastPubURI); err == nil {
 		if sourceType == "" {
 			sourceType = SourceRSS
 		}
 		return &Feed{
-			ID:         id,
-			Name:       name,
-			Normalized: normalized,
-			URI:        uri,
-			SourceType: sourceType,
-			ExternalID: externalID,
-			Updated:    updated,
-			Healthy:    healthy,
-			Blocked:    blocked,
-			LastPub:    lastPub,
-			LastPubURI: lastPubURI.String,
+			ID:          id,
+			Name:        name,
+			Normalized:  normalized,
+			URI:         uri,
+			SourceType:  sourceType,
+			ExternalID:  externalID,
+			Updated:     updated,
+			Healthy:     healthy,
+			Blocked:     blocked,
+			LastChecked: lastChecked,
+			LastPub:     lastPub,
+			LastPubURI:  lastPubURI.String,
 		}, err
 	} else if err == pgx.ErrNoRows {
 		return nil, nil
