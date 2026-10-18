@@ -9,14 +9,14 @@ import (
 
 // Feed represents feed db table structure
 type Feed struct {
-	ID         int
-	Name       string
-	Normalized string
-	URI        string
-	SourceType string
-	ExternalID string
-	Updated    *time.Time
-	Healthy    bool
+	ID          int
+	Name        string
+	Normalized  string
+	URI         string
+	SourceType  string
+	ExternalID  string
+	Updated     *time.Time
+	Healthy     bool
 	Blocked     bool
 	LastChecked *time.Time
 	LastPub     *time.Time
@@ -224,20 +224,40 @@ func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 	return toFeeds(rows)
 }
 
-// GetFeedsPage returns feeds for validation with offset/limit pagination
-func (db *Postgres) GetFeedsPage(offset int, limit int) ([]Feed, int, error) {
+func feedsPageQueries(healthy *bool) (countQuery string, listQuery string) {
+	where := ""
+	offsetPlaceholder := "$1"
+	limitPlaceholder := "$2"
+	if healthy != nil {
+		where = " WHERE healthy = $1"
+		offsetPlaceholder = "$2"
+		limitPlaceholder = "$3"
+	}
+
+	countQuery = `SELECT COUNT(*) FROM feeds` + where
+	listQuery = `SELECT ` + feedSelectColumns + `
+	FROM feeds` + where + `
+	ORDER BY last_checked ASC NULLS FIRST, id ASC
+	OFFSET ` + offsetPlaceholder + ` LIMIT ` + limitPlaceholder
+	return countQuery, listQuery
+}
+
+// GetFeedsPage returns feeds for validation with offset/limit pagination.
+// When healthy is non-nil, only feeds with that healthy flag are returned.
+func (db *Postgres) GetFeedsPage(offset int, limit int, healthy *bool) ([]Feed, int, error) {
+	countQuery, listQuery := feedsPageQueries(healthy)
+	args := make([]interface{}, 0, 3)
+	if healthy != nil {
+		args = append(args, *healthy)
+	}
+
 	var total int
-	countQuery := `SELECT COUNT(*) FROM feeds`
-	if err := db.Pool.QueryRow(db.Context, countQuery).Scan(&total); err != nil {
+	if err := db.Pool.QueryRow(db.Context, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	query := `SELECT ` + feedSelectColumns + `
-	FROM feeds
-	ORDER BY last_checked ASC NULLS FIRST, id ASC
-	OFFSET $1 LIMIT $2`
-
-	rows, err := db.Pool.Query(db.Context, query, offset, limit)
+	args = append(args, offset, limit)
+	rows, err := db.Pool.Query(db.Context, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}

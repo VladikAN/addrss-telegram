@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/k3a/html2text"
-	"github.com/mmcdole/gofeed"
 )
 
 // Topic is a lightweight representation of the parsed article
@@ -20,9 +19,7 @@ type Topic struct {
 
 // GetTitle parses uri with RSS/ATOM parser and returns feed name
 func GetTitle(uri string) (string, error) {
-	fp := gofeed.NewParser()
-
-	feed, err := fp.ParseURL(uri)
+	feed, err := fetchFeed(uri)
 	if err != nil {
 		return "", fmt.Errorf("unable to read '%s': %s", uri, err)
 	}
@@ -32,14 +29,9 @@ func GetTitle(uri string) (string, error) {
 
 // GetUpdates load artiales since specified date
 func GetUpdates(uri string, since time.Time) ([]Topic, error) {
-	fp := gofeed.NewParser()
-	feed, err := fp.ParseURL(uri)
+	feed, err := fetchFeed(uri)
 	if err != nil {
 		return nil, fmt.Errorf("unable read '%s': %s", uri, err)
-	}
-
-	if feed == nil {
-		return nil, nil
 	}
 
 	var topics []Topic
