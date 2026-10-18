@@ -69,7 +69,7 @@ func TestAuthMiddleware_XAPIToken(t *testing.T) {
 }
 
 func TestListFeedsHandler_Success(t *testing.T) {
-	db = &dbMock{
+	mock := &dbMock{
 		getFeedsPageMock: func() ([]database.Feed, int, error) {
 			return []database.Feed{
 				{ID: 1, Name: "Feed A", URI: "https://a.example/rss", SourceType: database.SourceRSS, Healthy: true, Blocked: false},
@@ -77,6 +77,7 @@ func TestListFeedsHandler_Success(t *testing.T) {
 			}, 10, nil
 		},
 	}
+	db = mock
 
 	req := httptest.NewRequest(http.MethodGet, "/api/feeds?offset=0&limit=2", nil)
 	w := httptest.NewRecorder()
@@ -114,6 +115,49 @@ func TestListFeedsHandler_Success(t *testing.T) {
 	}
 	if resp.Feeds[0].LastChecked != nil {
 		t.Errorf("Expected last_checked null for unchecked feed, got %v", resp.Feeds[0].LastChecked)
+	}
+	if !mock.feedsPageHealthySet || mock.feedsPageHealthy != nil {
+		t.Error("Expected no healthy filter when the query flag is omitted")
+	}
+}
+
+func TestListFeedsHandler_HealthyOnly(t *testing.T) {
+	mock := &dbMock{
+		getFeedsPageMock: func() ([]database.Feed, int, error) {
+			return []database.Feed{
+				{ID: 1, Name: "Feed A", URI: "https://a.example/rss", Healthy: true},
+			}, 1, nil
+		},
+	}
+	db = mock
+
+	req := httptest.NewRequest(http.MethodGet, "/api/feeds?healthy=true", nil)
+	w := httptest.NewRecorder()
+	listFeedsHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", w.Code)
+	}
+	if !mock.feedsPageHealthySet || mock.feedsPageHealthy == nil || !*mock.feedsPageHealthy {
+		t.Fatalf("Expected healthy=true filter, got set=%v value=%v", mock.feedsPageHealthySet, mock.feedsPageHealthy)
+	}
+
+	var resp feedsListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	if resp.Total != 1 || len(resp.Feeds) != 1 || !resp.Feeds[0].Healthy {
+		t.Fatalf("Unexpected response: %+v", resp)
+	}
+}
+
+func TestListFeedsHandler_InvalidHealthy(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/feeds?healthy=maybe", nil)
+	w := httptest.NewRecorder()
+	listFeedsHandler(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
 	}
 }
 

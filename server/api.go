@@ -17,13 +17,13 @@ const (
 )
 
 type feedResponse struct {
-	ID         int        `json:"id"`
-	Name       string     `json:"name"`
-	Normalized string     `json:"normalized"`
-	URI        string     `json:"uri"`
-	SourceType string     `json:"source_type"`
-	ExternalID string     `json:"external_id,omitempty"`
-	Updated    *time.Time `json:"updated,omitempty"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Normalized  string     `json:"normalized"`
+	URI         string     `json:"uri"`
+	SourceType  string     `json:"source_type"`
+	ExternalID  string     `json:"external_id,omitempty"`
+	Updated     *time.Time `json:"updated,omitempty"`
 	Healthy     bool       `json:"healthy"`
 	Blocked     bool       `json:"blocked"`
 	LastChecked *time.Time `json:"last_checked"`
@@ -93,7 +93,13 @@ func listFeedsHandler(w http.ResponseWriter, r *http.Request) {
 		limit = maxFeedsLimit
 	}
 
-	feeds, total, err := db.GetFeedsPage(offset, limit)
+	healthy, err := parseOptionalBool(r.URL.Query().Get("healthy"))
+	if err != nil {
+		http.Error(w, "invalid healthy", http.StatusBadRequest)
+		return
+	}
+
+	feeds, total, err := db.GetFeedsPage(offset, limit, healthy)
 	if err != nil {
 		log.Printf("ERROR api list feeds: %s", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -188,18 +194,34 @@ func toFeedResponse(feed database.Feed) feedResponse {
 		sourceType = database.SourceRSS
 	}
 	return feedResponse{
-		ID:         feed.ID,
-		Name:       feed.Name,
-		Normalized: feed.Normalized,
-		URI:        feed.URI,
-		SourceType: sourceType,
-		ExternalID: feed.ExternalID,
-		Updated:    feed.Updated,
+		ID:          feed.ID,
+		Name:        feed.Name,
+		Normalized:  feed.Normalized,
+		URI:         feed.URI,
+		SourceType:  sourceType,
+		ExternalID:  feed.ExternalID,
+		Updated:     feed.Updated,
 		Healthy:     feed.Healthy,
 		Blocked:     feed.Blocked,
 		LastChecked: feed.LastChecked,
 		LastPub:     feed.LastPub,
 		LastPubURI:  feed.LastPubURI,
+	}
+}
+
+func parseOptionalBool(raw string) (*bool, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	switch strings.ToLower(raw) {
+	case "1", "true", "yes":
+		value := true
+		return &value, nil
+	case "0", "false", "no":
+		value := false
+		return &value, nil
+	default:
+		return nil, strconv.ErrSyntax
 	}
 }
 

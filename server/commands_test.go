@@ -223,7 +223,7 @@ func TestFeedback_TooLong(t *testing.T) {
 	for i := 0; i < 1001; i++ {
 		longMessage += "a"
 	}
-	
+
 	exp := "feedback-too-long"
 	cmd := createTestCommand()
 	cmd.args = longMessage
@@ -290,7 +290,7 @@ func TestNotify_TooLong(t *testing.T) {
 	for i := 0; i < 2001; i++ {
 		longMessage += "a"
 	}
-	
+
 	exp := "notify-too-long"
 	cmd := createTestCommand()
 	cmd.admin = true
@@ -518,6 +518,8 @@ type dbMock struct {
 	getFeedByIDMock           func() (*database.Feed, error)
 	getFeedsMock              func() ([]database.Feed, error)
 	getFeedsPageMock          func() ([]database.Feed, int, error)
+	feedsPageHealthy          *bool
+	feedsPageHealthySet       bool
 	resetFeedMock             func() error
 	getFeedUsersMock          func() ([]database.UserFeed, error)
 	getAllUsersMock           func() ([]int64, error)
@@ -537,9 +539,9 @@ func (db *dbMock) GetStats() (*database.Stats, error) {
 func (db *dbMock) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*database.Feed, error) {
 	return db.addFeedMock()
 }
-func (db *dbMock) Subscribe(userID int64, feedID int) error           { return db.subscribeMock() }
-func (db *dbMock) Unsubscribe(userID int64, feedID int) error         { return db.unsubscribeMock() }
-func (db *dbMock) DeleteUser(userID int64) error                      { return db.deleteUserMock() }
+func (db *dbMock) Subscribe(userID int64, feedID int) error   { return db.subscribeMock() }
+func (db *dbMock) Unsubscribe(userID int64, feedID int) error { return db.unsubscribeMock() }
+func (db *dbMock) DeleteUser(userID int64) error              { return db.deleteUserMock() }
 func (db *dbMock) EnsureUser(userID int64) error {
 	if db.ensureUserMock == nil {
 		return nil
@@ -562,7 +564,9 @@ func (db *dbMock) GetUserNormalizedFeed(userID int64, normalized string) (*datab
 func (db *dbMock) GetFeed(uri string) (*database.Feed, error)  { return db.getFeedMock() }
 func (db *dbMock) GetFeedByID(id int) (*database.Feed, error)  { return db.getFeedByIDMock() }
 func (db *dbMock) GetFeeds(count int) ([]database.Feed, error) { return db.getFeedsMock() }
-func (db *dbMock) GetFeedsPage(offset int, limit int) ([]database.Feed, int, error) {
+func (db *dbMock) GetFeedsPage(offset int, limit int, healthy *bool) ([]database.Feed, int, error) {
+	db.feedsPageHealthy = healthy
+	db.feedsPageHealthySet = true
 	return db.getFeedsPageMock()
 }
 func (db *dbMock) GetFeedUsers(feedID int) ([]database.UserFeed, error) { return db.getFeedUsersMock() }
