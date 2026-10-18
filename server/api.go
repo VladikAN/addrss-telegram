@@ -24,10 +24,11 @@ type feedResponse struct {
 	SourceType string     `json:"source_type"`
 	ExternalID string     `json:"external_id,omitempty"`
 	Updated    *time.Time `json:"updated,omitempty"`
-	Healthy    bool       `json:"healthy"`
-	Blocked    bool       `json:"blocked"`
-	LastPub    *time.Time `json:"last_pub,omitempty"`
-	LastPubURI string     `json:"last_pub_uri,omitempty"`
+	Healthy     bool       `json:"healthy"`
+	Blocked     bool       `json:"blocked"`
+	LastChecked *time.Time `json:"last_checked"`
+	LastPub     *time.Time `json:"last_pub,omitempty"`
+	LastPubURI  string     `json:"last_pub_uri,omitempty"`
 }
 
 type feedsListResponse struct {
@@ -159,7 +160,17 @@ func setFeedBlockedHandler(w http.ResponseWriter, id int, blocked bool) {
 		return
 	}
 
-	feed.Blocked = blocked
+	feed, err = db.GetFeedByID(id)
+	if err != nil {
+		log.Printf("ERROR api get feed %d after block update: %s", id, err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if feed == nil {
+		http.Error(w, "feed not found", http.StatusNotFound)
+		return
+	}
+
 	writeJSON(w, http.StatusOK, toFeedResponse(*feed))
 }
 
@@ -184,10 +195,11 @@ func toFeedResponse(feed database.Feed) feedResponse {
 		SourceType: sourceType,
 		ExternalID: feed.ExternalID,
 		Updated:    feed.Updated,
-		Healthy:    feed.Healthy,
-		Blocked:    feed.Blocked,
-		LastPub:    feed.LastPub,
-		LastPubURI: feed.LastPubURI,
+		Healthy:     feed.Healthy,
+		Blocked:     feed.Blocked,
+		LastChecked: feed.LastChecked,
+		LastPub:     feed.LastPub,
+		LastPubURI:  feed.LastPubURI,
 	}
 }
 

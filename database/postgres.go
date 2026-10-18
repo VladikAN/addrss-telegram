@@ -81,7 +81,7 @@ type Database interface {
 	// GetFeedByID get feed record by its id
 	GetFeedByID(id int) (*Feed, error)
 
-	// SetFeedBlocked update feed blocked flag
+	// SetFeedBlocked update feed blocked flag and last check time
 	SetFeedBlocked(id int, blocked bool) error
 }
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/vladikan/addrss-telegram/database"
 )
@@ -111,6 +112,9 @@ func TestListFeedsHandler_Success(t *testing.T) {
 	if resp.Feeds[1].ExternalID != "UCHnyfMqiRRG1u-2MsSQLbXA" {
 		t.Errorf("Expected youtube external_id, got %q", resp.Feeds[1].ExternalID)
 	}
+	if resp.Feeds[0].LastChecked != nil {
+		t.Errorf("Expected last_checked null for unchecked feed, got %v", resp.Feeds[0].LastChecked)
+	}
 }
 
 func TestListFeedsHandler_InvalidOffset(t *testing.T) {
@@ -125,9 +129,15 @@ func TestListFeedsHandler_InvalidOffset(t *testing.T) {
 
 func TestBlockFeedHandler_Success(t *testing.T) {
 	blocked := false
+	now := time.Now().UTC().Truncate(time.Second)
 	db = &dbMock{
 		getFeedByIDMock: func() (*database.Feed, error) {
-			return &database.Feed{ID: 7, Name: "Feed", URI: "https://example.com/rss", Healthy: true}, nil
+			feed := &database.Feed{ID: 7, Name: "Feed", URI: "https://example.com/rss", Healthy: true}
+			if blocked {
+				feed.Blocked = true
+				feed.LastChecked = &now
+			}
+			return feed, nil
 		},
 		setFeedBlockedMock: func() error {
 			blocked = true
@@ -153,6 +163,9 @@ func TestBlockFeedHandler_Success(t *testing.T) {
 	if !resp.Blocked || resp.ID != 7 {
 		t.Errorf("Unexpected response: %+v", resp)
 	}
+	if resp.LastChecked == nil {
+		t.Error("Expected last_checked to be set after block")
+	}
 }
 
 func TestBlockFeedHandler_NotFound(t *testing.T) {
@@ -170,11 +183,21 @@ func TestBlockFeedHandler_NotFound(t *testing.T) {
 }
 
 func TestUnblockFeedHandler_Success(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	unblocked := false
 	db = &dbMock{
 		getFeedByIDMock: func() (*database.Feed, error) {
-			return &database.Feed{ID: 3, Name: "Feed", URI: "https://example.com/rss", Blocked: true}, nil
+			feed := &database.Feed{ID: 3, Name: "Feed", URI: "https://example.com/rss", Blocked: true}
+			if unblocked {
+				feed.Blocked = false
+				feed.LastChecked = &now
+			}
+			return feed, nil
 		},
-		setFeedBlockedMock: func() error { return nil },
+		setFeedBlockedMock: func() error {
+			unblocked = true
+			return nil
+		},
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/feeds/3/unblock", nil)
@@ -189,6 +212,9 @@ func TestUnblockFeedHandler_Success(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&resp)
 	if resp.Blocked {
 		t.Error("Expected feed to be unblocked")
+	}
+	if resp.LastChecked == nil {
+		t.Error("Expected last_checked to be set after unblock")
 	}
 }
 
