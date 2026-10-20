@@ -11,7 +11,6 @@ import (
 
 	log "github.com/go-pkgz/lgr"
 	"github.com/vladikan/addrss-telegram/database"
-	"github.com/vladikan/addrss-telegram/metrics"
 	"github.com/vladikan/addrss-telegram/templates"
 )
 
@@ -54,7 +53,6 @@ func StartLocal(options Options) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
-	mux.Handle("/metrics", metrics.Handler())
 	registerValidationAPI(mux, &options)
 
 	addr := fmt.Sprintf(":%d", options.HTTPPort)

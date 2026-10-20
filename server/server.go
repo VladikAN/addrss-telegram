@@ -12,7 +12,6 @@ import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
-	"github.com/vladikan/addrss-telegram/metrics"
 	"github.com/vladikan/addrss-telegram/templates"
 	"github.com/vladikan/addrss-telegram/youtube"
 )
@@ -105,22 +104,23 @@ func configureYouTube(apiKey string) {
 }
 
 func startValidationAPIServer(options *Options) *http.Server {
+	if options.APIToken == "" {
+		return nil
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
-	mux.Handle("/metrics", metrics.Handler())
-	if options.APIToken != "" {
-		registerValidationAPI(mux, options)
-	}
+	registerValidationAPI(mux, options)
 
 	addr := fmt.Sprintf(":%d", options.HTTPPort)
 	srv := &http.Server{Addr: addr, Handler: mux}
 	go func() {
-		log.Printf("INFO HTTP server listening on %s", addr)
+		log.Printf("INFO Validation API listening on %s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("ERROR HTTP server error: %s", err)
+			log.Printf("ERROR Validation API server error: %s", err)
 		}
 	}()
 	return srv
