@@ -6,6 +6,7 @@ import (
 	log "github.com/go-pkgz/lgr"
 
 	"github.com/vladikan/addrss-telegram/database"
+	"github.com/vladikan/addrss-telegram/metrics"
 	"github.com/vladikan/addrss-telegram/parser"
 	"github.com/vladikan/addrss-telegram/templates"
 	"github.com/vladikan/addrss-telegram/youtube"
@@ -57,14 +58,20 @@ func (rd *Reader) Stop() {
 }
 
 func (rd *Reader) readFeeds() error {
-	log.Printf("DEBUG Reader job started. %d feeds to read", rd.Feeds)
-	duration := time.Duration(rd.Interval) * time.Second
+	started := time.Now()
 
 	// Read feeds from db
 	feeds, err := rd.DB.GetFeeds(rd.Feeds)
 	if err != nil {
 		return err
 	}
+
+	log.Printf("INFO Reader batch started. %d feeds", len(feeds))
+	defer func() {
+		elapsed := time.Since(started)
+		metrics.ObserveBatch(elapsed.Seconds())
+		log.Printf("INFO Reader batch completed. %d feeds in %s", len(feeds), elapsed.Round(time.Millisecond))
+	}()
 
 	stats := struct {
 		updated    int
@@ -75,8 +82,11 @@ func (rd *Reader) readFeeds() error {
 
 	// Read feeds from servers
 	for _, feed := range feeds {
+		readStarted := time.Now()
 		updates, err := parser.GetUpdates(feedReadURI(feed), *feed.LastPub)
+		metrics.ObserveFeedRead(feed.SourceType, time.Since(readStarted).Seconds())
 		if err != nil {
+			metrics.FeedRead(metrics.ResultError, feed.SourceType)
 			log.Printf("ERROR Feed '%s' unable get updates: %s", feed.Normalized, err)
 			if markErr := rd.DB.SetFeedBroken(feed.ID); markErr != nil {
 				log.Printf("ERROR Feed '%s' unable mark as broken: %s", feed.Normalized, markErr)
@@ -97,6 +107,9 @@ func (rd *Reader) readFeeds() error {
 			}
 
 			if len(newUpdates) > 0 {
+				metrics.FeedRead(metrics.ResultUpdated, feed.SourceType)
+				metrics.PostsFound(feed.SourceType, len(newUpdates))
+
 				users, err := rd.DB.GetFeedUsers(feed.ID)
 				if err != nil {
 					log.Printf("ERROR Feed '%s' unable get subscriptions: %s", feed.Normalized, err)
@@ -108,6 +121,7 @@ func (rd *Reader) readFeeds() error {
 				stats.feeds++
 				if len(users) > 0 {
 					rd.sendUpdates(newUpdates, users)
+					metrics.NotificationsSent(feed.SourceType, len(newUpdates)*len(users))
 				}
 
 				// Update last publication date and URI to the latest processed article
@@ -117,11 +131,14 @@ func (rd *Reader) readFeeds() error {
 					log.Printf("ERROR Feed '%s' unable update last pub date and URI: %s", feed.Normalized, err)
 					continue
 				}
+			} else {
+				metrics.FeedRead(metrics.ResultOK, feed.SourceType)
 			}
 
 			continue
 		}
 
+		metrics.FeedRead(metrics.ResultOK, feed.SourceType)
 		err = rd.DB.SetFeedUpdated(feed.ID)
 		if err != nil {
 			log.Printf("ERROR Feed '%s' unable mark as updated: %s", feed.Normalized, err)
@@ -133,7 +150,6 @@ func (rd *Reader) readFeeds() error {
 		log.Printf("DEBUG Reader found %d new post(s) for %d feed(s) and notified %d subscription(s) (skipped %d duplicates)", stats.updated, stats.feeds, stats.notified, stats.duplicates)
 	}
 
-	log.Printf("DEBUG Reader job completed. %d feeds updated. Next call in %s", len(feeds), time.Now().Add(duration))
 	return nil
 }
 
