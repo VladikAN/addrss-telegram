@@ -7,6 +7,7 @@ import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
+	"github.com/vladikan/addrss-telegram/metrics"
 	"github.com/vladikan/addrss-telegram/parser"
 	"github.com/vladikan/addrss-telegram/templates"
 	"github.com/vladikan/addrss-telegram/youtube"
@@ -86,7 +87,7 @@ func (cmd *Command) run() []Reply {
 	log.Printf("DEBUG request: %s", cmd.text)
 
 	// Inbound activity means the user can talk to the bot again — clear blocked flag.
-	if err := db.EnsureUser(cmd.userID); err != nil {
+	if _, err := db.EnsureUser(cmd.userID); err != nil {
 		log.Printf("ERROR failed to ensure user %d: %s", cmd.userID, err)
 	}
 
@@ -271,6 +272,7 @@ func (cmd *Command) remove() (string, error) {
 		return emptyText, err
 	}
 
+	metrics.SubscriptionRemoved(feed.SourceType)
 	return templates.ToTextW(cmd.lang, "remove-success", feed)
 }
 
