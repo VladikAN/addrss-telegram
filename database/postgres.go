@@ -24,8 +24,9 @@ type Database interface {
 	// GetStats gets total number of users, blocked users, feeds and blocked feeds
 	GetStats() (*Stats, error)
 
-	// AddFeed inserts new feed to feeds postgres table
-	AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, error)
+	// AddFeed inserts new feed to feeds postgres table.
+	// The boolean is true when a new feed row was inserted.
+	AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, bool, error)
 
 	// Subscribe bind relation between user and feed
 	Subscribe(userID int64, feedID int) error
@@ -36,8 +37,9 @@ type Database interface {
 	// DeleteUser will delete all user records
 	DeleteUser(userID int64) error
 
-	// EnsureUser creates a user row if missing and clears the blocked flag
-	EnsureUser(userID int64) error
+	// EnsureUser creates a user row if missing and clears the blocked flag.
+	// The boolean is true when a new user row was inserted.
+	EnsureUser(userID int64) (bool, error)
 
 	// SetUserBlocked marks the user as blocked so the bot stops sending messages
 	SetUserBlocked(userID int64) error

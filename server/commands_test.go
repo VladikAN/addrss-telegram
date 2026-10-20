@@ -536,17 +536,18 @@ func (db *dbMock) GetStats() (*database.Stats, error) {
 	}
 	return db.getStatsMock()
 }
-func (db *dbMock) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*database.Feed, error) {
-	return db.addFeedMock()
+func (db *dbMock) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*database.Feed, bool, error) {
+	feed, err := db.addFeedMock()
+	return feed, false, err
 }
 func (db *dbMock) Subscribe(userID int64, feedID int) error   { return db.subscribeMock() }
 func (db *dbMock) Unsubscribe(userID int64, feedID int) error { return db.unsubscribeMock() }
 func (db *dbMock) DeleteUser(userID int64) error              { return db.deleteUserMock() }
-func (db *dbMock) EnsureUser(userID int64) error {
+func (db *dbMock) EnsureUser(userID int64) (bool, error) {
 	if db.ensureUserMock == nil {
-		return nil
+		return false, nil
 	}
-	return db.ensureUserMock()
+	return false, db.ensureUserMock()
 }
 func (db *dbMock) SetUserBlocked(userID int64) error {
 	if db.setUserBlockedMock == nil {

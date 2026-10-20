@@ -77,23 +77,28 @@ func (db *Postgres) GetStats() (*Stats, error) {
 	return result, nil
 }
 
-// AddFeed inserts new feed to feeds postgres table
-func (db *Postgres) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, error) {
+// AddFeed inserts new feed to feeds postgres table.
+// The boolean is true when this call inserted the feed.
+func (db *Postgres) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, bool, error) {
 	if sourceType == "" {
 		sourceType = SourceRSS
 	}
 	query := `INSERT INTO feeds (name, normalized, uri, source_type, external_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (uri) DO NOTHING`
-	_, err := db.Pool.Exec(db.Context, query, name, normalized, uri, sourceType, externalID)
+	tag, err := db.Pool.Exec(db.Context, query, name, normalized, uri, sourceType, externalID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return db.GetFeed(uri)
+	feed, err := db.GetFeed(uri)
+	if err != nil {
+		return nil, false, err
+	}
+	return feed, tag.RowsAffected() > 0, nil
 }
 
 // Subscribe bind relation between user and feed
 func (db *Postgres) Subscribe(userID int64, feedID int) error {
-	if err := db.EnsureUser(userID); err != nil {
+	if _, err := db.EnsureUser(userID); err != nil {
 		return err
 	}
 
@@ -123,11 +128,18 @@ func (db *Postgres) DeleteUser(userID int64) error {
 
 // EnsureUser creates a user row if missing and clears the blocked flag.
 // Call this when the user sends any inbound message (they can talk to the bot again).
-func (db *Postgres) EnsureUser(userID int64) error {
+// The boolean is true when this call inserted the user.
+func (db *Postgres) EnsureUser(userID int64) (bool, error) {
+	// xmax = 0 distinguishes an insert from the conflict update.
 	query := `INSERT INTO users (user_id, blocked, blocked_at) VALUES ($1, FALSE, NULL)
-	ON CONFLICT (user_id) DO UPDATE SET blocked = FALSE, blocked_at = NULL`
-	_, err := db.Pool.Exec(db.Context, query, userID)
-	return err
+	ON CONFLICT (user_id) DO UPDATE SET blocked = FALSE, blocked_at = NULL
+	RETURNING (xmax = 0)`
+	var created bool
+	err := db.Pool.QueryRow(db.Context, query, userID).Scan(&created)
+	if err != nil {
+		return false, err
+	}
+	return created, nil
 }
 
 // SetUserBlocked marks the user as blocked so delivery attempts stop.

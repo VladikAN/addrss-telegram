@@ -7,6 +7,7 @@ import (
 	log "github.com/go-pkgz/lgr"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/vladikan/addrss-telegram/database"
+	"github.com/vladikan/addrss-telegram/metrics"
 	"github.com/vladikan/addrss-telegram/parser"
 	"github.com/vladikan/addrss-telegram/templates"
 	"github.com/vladikan/addrss-telegram/youtube"
@@ -86,8 +87,10 @@ func (cmd *Command) run() []Reply {
 	log.Printf("DEBUG request: %s", cmd.text)
 
 	// Inbound activity means the user can talk to the bot again — clear blocked flag.
-	if err := db.EnsureUser(cmd.userID); err != nil {
+	if created, err := db.EnsureUser(cmd.userID); err != nil {
 		log.Printf("ERROR failed to ensure user %d: %s", cmd.userID, err)
+	} else if created {
+		metrics.UserCreated()
 	}
 
 	var replies []Reply
@@ -271,6 +274,7 @@ func (cmd *Command) remove() (string, error) {
 		return emptyText, err
 	}
 
+	metrics.SubscriptionRemoved(feed.SourceType)
 	return templates.ToTextW(cmd.lang, "remove-success", feed)
 }
 
@@ -334,9 +338,13 @@ func addFeed(userID int64, uri string, title string) (*database.Feed, error) {
 			}
 		}
 
-		feed, err = db.AddFeed(title, normalize(title), uri, database.SourceRSS, "")
+		var created bool
+		feed, created, err = db.AddFeed(title, normalize(title), uri, database.SourceRSS, "")
 		if err != nil {
 			return nil, err
+		}
+		if created {
+			metrics.FeedCreated(database.SourceRSS)
 		}
 	} else {
 		_ = db.ResetFeed(feed.ID)
@@ -357,9 +365,13 @@ func addResolvedFeed(userID int64, source *resolvedSource) (*database.Feed, erro
 	}
 
 	if feed == nil {
-		feed, err = db.AddFeed(source.Title, normalize(source.Title), source.URI, source.SourceType, source.ExternalID)
+		var created bool
+		feed, created, err = db.AddFeed(source.Title, normalize(source.Title), source.URI, source.SourceType, source.ExternalID)
 		if err != nil {
 			return nil, err
+		}
+		if created {
+			metrics.FeedCreated(source.SourceType)
 		}
 	} else {
 		_ = db.ResetFeed(feed.ID)
