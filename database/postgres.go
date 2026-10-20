@@ -77,7 +77,7 @@ type Database interface {
 	// SetFeedBroken update feed by setting healthy to false
 	SetFeedBroken(id int) error
 
-	// GetFeedsPage returns feeds for validation with offset/limit pagination.
+	// GetFeedsPage returns subscribed feeds for validation with offset/limit pagination.
 	// healthy filters the page when non-nil.
 	GetFeedsPage(offset int, limit int, healthy *bool) ([]Feed, int, error)
 

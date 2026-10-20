@@ -237,11 +237,11 @@ func (db *Postgres) GetFeeds(count int) ([]Feed, error) {
 }
 
 func feedsPageQueries(healthy *bool) (countQuery string, listQuery string) {
-	where := ""
+	where := ` WHERE EXISTS (SELECT 1 FROM userfeeds uf WHERE uf.feed_id = feeds.id)`
 	offsetPlaceholder := "$1"
 	limitPlaceholder := "$2"
 	if healthy != nil {
-		where = " WHERE healthy = $1"
+		where += " AND healthy = $1"
 		offsetPlaceholder = "$2"
 		limitPlaceholder = "$3"
 	}
@@ -254,8 +254,8 @@ func feedsPageQueries(healthy *bool) (countQuery string, listQuery string) {
 	return countQuery, listQuery
 }
 
-// GetFeedsPage returns feeds for validation with offset/limit pagination.
-// When healthy is non-nil, only feeds with that healthy flag are returned.
+// GetFeedsPage returns subscribed feeds for validation with offset/limit pagination.
+// Feeds without rows in userfeeds are omitted. When healthy is non-nil, only feeds with that healthy flag are returned.
 func (db *Postgres) GetFeedsPage(offset int, limit int, healthy *bool) ([]Feed, int, error) {
 	countQuery, listQuery := feedsPageQueries(healthy)
 	args := make([]interface{}, 0, 3)
