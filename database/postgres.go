@@ -24,8 +24,9 @@ type Database interface {
 	// GetStats gets total number of users, blocked users, feeds and blocked feeds
 	GetStats() (*Stats, error)
 
-	// AddFeed inserts new feed to feeds postgres table
-	AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, error)
+	// AddFeed inserts new feed to feeds postgres table.
+	// The boolean is true when a new feed row was inserted.
+	AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, bool, error)
 
 	// Subscribe bind relation between user and feed
 	Subscribe(userID int64, feedID int) error

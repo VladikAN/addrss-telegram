@@ -536,8 +536,9 @@ func (db *dbMock) GetStats() (*database.Stats, error) {
 	}
 	return db.getStatsMock()
 }
-func (db *dbMock) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*database.Feed, error) {
-	return db.addFeedMock()
+func (db *dbMock) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*database.Feed, bool, error) {
+	feed, err := db.addFeedMock()
+	return feed, false, err
 }
 func (db *dbMock) Subscribe(userID int64, feedID int) error   { return db.subscribeMock() }
 func (db *dbMock) Unsubscribe(userID int64, feedID int) error { return db.unsubscribeMock() }

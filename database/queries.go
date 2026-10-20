@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v4"
-	"github.com/vladikan/addrss-telegram/metrics"
 )
 
 // Feed represents feed db table structure
@@ -78,25 +77,23 @@ func (db *Postgres) GetStats() (*Stats, error) {
 	return result, nil
 }
 
-// AddFeed inserts new feed to feeds postgres table
-func (db *Postgres) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, error) {
+// AddFeed inserts new feed to feeds postgres table.
+// The boolean is true when this call inserted the feed.
+func (db *Postgres) AddFeed(name string, normalized string, uri string, sourceType string, externalID string) (*Feed, bool, error) {
 	if sourceType == "" {
 		sourceType = SourceRSS
 	}
 	query := `INSERT INTO feeds (name, normalized, uri, source_type, external_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (uri) DO NOTHING`
 	tag, err := db.Pool.Exec(db.Context, query, name, normalized, uri, sourceType, externalID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	feed, err := db.GetFeed(uri)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	if tag.RowsAffected() > 0 {
-		metrics.FeedCreated(sourceType)
-	}
-	return feed, nil
+	return feed, tag.RowsAffected() > 0, nil
 }
 
 // Subscribe bind relation between user and feed
@@ -141,9 +138,6 @@ func (db *Postgres) EnsureUser(userID int64) (bool, error) {
 	err := db.Pool.QueryRow(db.Context, query, userID).Scan(&created)
 	if err != nil {
 		return false, err
-	}
-	if created {
-		metrics.UserCreated()
 	}
 	return created, nil
 }
